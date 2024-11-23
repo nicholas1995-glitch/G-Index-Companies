@@ -169,5 +169,7 @@ def fetch_data():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Usa la porta fornita da Render o la 5000 di default
+    app.run(host="0.0.0.0", port=port, debug=False)
+    
 
