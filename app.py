@@ -1,12 +1,13 @@
 from flask import Flask, render_template, jsonify, request
+from flask_cors import CORS
 import requests
 from lxml import html
 import random
 import time
-import json
 import os
 
 app = Flask(__name__)
+CORS(app)  # Abilita CORS per tutte le route
 
 # Lista aziende con nome completo, ticker e ISIN
 companies_info = {
@@ -91,7 +92,6 @@ USER_AGENTS = [
 session = requests.Session()
 session.headers.update({"User-Agent": random.choice(USER_AGENTS)})
 
-
 def scrape_stock_data(ticker):
     try:
         url_main = f"https://finance.yahoo.com/quote/{ticker}/"
@@ -116,8 +116,9 @@ def scrape_stock_data(ticker):
             "Ticker": ticker,
             "Full Name": companies_info[ticker]["name"],
             "ISIN": companies_info[ticker]["isin"],
+            "Calcolo": f"((P/E: {pe_ratio[0] if pe_ratio else '--'} / 15) * 0.4) + (P/B: {pb_ratio[0] if pb_ratio else '--'} * 0.4) + (PEG: {peg_ratio[0] if peg_ratio else '--'} * 0.2)",
         }
-    except Exception:
+    except Exception as e:
         return {
             "P/E Ratio": "--",
             "P/Book Ratio": "--",
@@ -125,8 +126,8 @@ def scrape_stock_data(ticker):
             "Ticker": ticker,
             "Full Name": companies_info[ticker]["name"],
             "ISIN": companies_info[ticker]["isin"],
+            "Calcolo": "Errore nel calcolo",
         }
-
 
 def calculate_g_index(company):
     try:
@@ -137,8 +138,12 @@ def calculate_g_index(company):
     except:
         return "--"
 
+@app.route("/")
+def home():
+    return render_template("index.html")
 
-def save_scraped_data():
+@app.route("/fetch_data", methods=["POST"])
+def fetch_data():
     tickers = list(companies_info.keys())
     companies = []
     for i in range(0, len(tickers), 5):
@@ -149,24 +154,7 @@ def save_scraped_data():
             companies.append(company_data)
         if i + 5 < len(tickers):  # Attendi solo tra i batch
             print(f"Attesa di 60 secondi prima di elaborare il prossimo batch...")
-            time.sleep(60)
-
-    with open("data.json", "w") as f:
-        json.dump(companies, f)
-
-
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-
-@app.route("/fetch_data", methods=["GET"])
-def fetch_data():
-    try:
-        with open("data.json", "r") as f:
-            companies = json.load(f)
-    except FileNotFoundError:
-        return jsonify({"error": "Dati non disponibili. Riprovare più tardi."}), 503
+            time.sleep(40)
 
     green = [c for c in companies if c["Indice G"] != "--" and c["Indice G"] < 1]
     orange = [c for c in companies if c["Indice G"] != "--" and 1 <= c["Indice G"] < 1.5]
@@ -178,11 +166,7 @@ def fetch_data():
 
     return jsonify({"green": green, "orange": orange, "red": red})
 
-
 if __name__ == "__main__":
-    mode = os.environ.get("MODE", "production")
-    if mode == "scraper":
-        save_scraped_data()
-    else:
-        port = int(os.environ.get("PORT", 5000))  # Usa la porta fornita da Render o la 5000 di default
-        app.run(host="0.0.0.0", port=port, debug=False)
+    port = int(os.environ.get("PORT", 5000))  # Usa la porta fornita da Render o la 5000 di default
+    app.run(host="0.0.0.0", port=port, debug=False)
+
