@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G Index Companies</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f4f9;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+            color: #007bff;
+        }
+        .table th {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+        .green-header, .orange-header, .red-header {
+            padding: 15px;
+            margin-top: 20px;
+            font-weight: bold;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .green-header {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .orange-header {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .red-header {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            font-weight: bold;
+            color: #007bff;
+            margin: 20px 0;
+        }
+        .password-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .password-section input {
+            margin-right: 10px;
+        }
+        .extra-data {
+            display: none;
+        }
+        .highlight-g {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>G Index Companies</h1>
+
+        <div class="password-section">
+            <label for="password">Per visualizzare i dati origine, inserire la password:</label>
+            <input type="password" id="password" placeholder="Inserisci password">
+            <button class="btn btn-primary" onclick="revealData()">Conferma Password</button>
+        </div>
+
+        <!-- Sezione Verde -->
+        <div class="green-header">Aziende con Indice G < 1 </div>
+        <table class="table table-hover table-bordered">
+            <thead class="table-success">
+                <tr>
+                    <th>Posizione</th>
+                    <th>Nome Azienda</th>
+                    <th>Ticker</th>
+                    <th>ISIN</th>
+                    <th class="highlight-g">Indice G</th>
+                </tr>
+            </thead>
+            <tbody id="green-table-body">
+                <!-- Dati verde -->
+            </tbody>
+        </table>
+
+        <!-- Sezione Arancione -->
+        <div class="orange-header">Aziende con Indice G fino a 1.5 </div>
+        <table class="table table-hover table-bordered">
+            <thead class="table-warning">
+                <tr>
+                    <th>Posizione</th>
+                    <th>Nome Azienda</th>
+                    <th>Ticker</th>
+                    <th>ISIN</th>
+                    <th class="highlight-g">Indice G</th>
+                </tr>
+            </thead>
+            <tbody id="orange-table-body">
+                <!-- Dati arancione -->
+            </tbody>
+        </table>
+
+        <!-- Sezione Rossa -->
+        <div class="red-header">Aziende con Indice G ≥ 1.5 </div>
+        <table class="table table-hover table-bordered">
+            <thead class="table-danger">
+                <tr>
+                    <th>Posizione</th>
+                    <th>Nome Azienda</th>
+                    <th>Ticker</th>
+                    <th>ISIN</th>
+                    <th class="highlight-g">Indice G</th>
+                </tr>
+            </thead>
+            <tbody id="red-table-body">
+                <!-- Dati rosso -->
+            </tbody>
+        </table>
+
+        <div class="extra-data">
+            <h2 class="text-center">Dati Origine</h2>
+            <table class="table table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th>Nome Azienda</th>
+                        <th>Ticker</th>
+                        <th>P/E Ratio</th>
+                        <th>P/Book Ratio</th>
+                        <th>PEG Ratio (5y)</th>
+                        <th>Calcolo Indice G</th>
+                    </tr>
+                </thead>
+                <tbody id="extra-data-table-body">
+                    <!-- Dati extra -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="loading" id="loading">Caricamento in corso...</div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        async function fetchDataBatch() {
+            try {
+                const response = await fetch("/fetch_data", { method: "POST" });
+                if (!response.ok) {
+                    throw new Error("Errore durante il recupero dei dati");
+                }
+
+                const data = await response.json();
+                const greenTable = document.getElementById("green-table-body");
+                const orangeTable = document.getElementById("orange-table-body");
+                const redTable = document.getElementById("red-table-body");
+                const extraTable = document.getElementById("extra-data-table-body");
+
+                // Svuota le tabelle
+                greenTable.innerHTML = "";
+                orangeTable.innerHTML = "";
+                redTable.innerHTML = "";
+                extraTable.innerHTML = "";
+
+                // Popola la tabella verde
+                data.green.forEach((company, index) => {
+                    const row = createRow(company, index + 1);
+                    greenTable.appendChild(row);
+                });
+
+                // Popola la tabella arancione
+                data.orange.forEach((company, index) => {
+                    const row = createRow(company, index + 1);
+                    orangeTable.appendChild(row);
+                });
+
+                // Popola la tabella rossa
+                data.red.forEach((company, index) => {
+                    const row = createRow(company, index + 1);
+                    redTable.appendChild(row);
+                });
+
+                // Popola i dati extra
+                [...data.green, ...data.orange, ...data.red].forEach(company => {
+                    const extraRow = createExtraRow(company);
+                    extraTable.appendChild(extraRow);
+                });
+
+                // Nascondi il messaggio di caricamento
+                document.getElementById("loading").style.display = "none";
+            } catch (error) {
+                console.error("Errore durante il caricamento dei dati:", error);
+                document.getElementById("loading").innerText = "Errore durante il caricamento dei dati. Riprova più tardi.";
+            }
+        }
+
+        function createRow(company, position) {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${position}</td>
+                <td>${company["Full Name"]}</td>
+                <td>${company["Ticker"]}</td>
+                <td>${company["ISIN"]}</td>
+                <td class="highlight-g">${company["Indice G"]}</td>
+            `;
+            return row;
+        }
+
+        function createExtraRow(company) {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${company["Full Name"]}</td>
+                <td>${company["Ticker"]}</td>
+                <td>${company["P/E Ratio"]}</td>
+                <td>${company["P/Book Ratio"]}</td>
+                <td>${company["PEG Ratio (5y)"]}</td>
+                <td>${company["Calcolo"]}</td>
+            `;
+            return row;
+        }
+
+        function revealData() {
+            const password = document.getElementById("password").value;
+            if (password === "123456") {
+                document.querySelector(".extra-data").style.display = "block";
+            } else {
+                alert("Password errata");
+            }
+        }
+
+        // Avvia il caricamento dei dati
+        fetchDataBatch();
+    </script>
+</body>
+</html>

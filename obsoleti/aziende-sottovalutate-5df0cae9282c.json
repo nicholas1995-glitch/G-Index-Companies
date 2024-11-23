@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "aziende-sottovalutate",
+  "private_key_id": "5df0cae9282cf32c16b1cecc690f1b79c71be292",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC4eOUniXuQOoCs\nqNFOKcG5o6xLsLTX/mIaVyTX2GvYAeW5pBKtkxRDVhwhE2a76WDnFxkVwzwOQnRC\nMAmNk2HJ8cs1dX1V2ZeXQGa348iPJAujqxEN73FZ9dgKcmpifiMlicw/j/Eyzlqv\nlQJxlRV62Lz+X3nsSEgL53qPabdUkuea+KRBFktZGkTVeRu3Z1FVMYvw1f8yqStM\npAUdOCMgiqhugUeKCDSxU6Mn/7PUWXWF8CxP5wrcICSLaj78Qb++vo18JRTsZe90\n+HJBdxUwtRyaeV+R2aO2L2WBROu9TUjAy0OGrwd4KyarUbQ5y9B/FEG+JG7u82VD\nOSD1NGavAgMBAAECggEAIxCr8neCOti8A9X1L0flsK1pf1vADHyo1jvxX2wel8lI\niyCigkb+Z4xTPYBMG3URu+uak5XwcP91zO0Hq9czk+j3yRojsHFzjMcrn1HXmknu\nQnauf7kfkUuXfOjhywYSFT0by4tHfHJYL58B/2go1JilWC765Iya0VR3ahJczGDr\nFCNOBewCZidYLhMzOqAdxpj+XjBshY9fifxxoP9DFnVAMkMSxd/fmSp9O2x7OFYV\nhsS5ooY17mTxba27x+LaQSA7Xhx/e9Ad9Akav5h/ey3exgXVVHfxAvP7BexnZMN5\njXjGv4rBBmD2eoHzRQFZOQjP6m5IMWijjdrRqdGduQKBgQD1mZ7iA/QlU+3bKjsF\njpLPt/m1RY3o3AWX+4XKRT+kFCmRNBpN2Mf1LJFBgJ3FsnrydfzD7OscL2+84VMu\nXpACGQDK407Vz7X+YmUQ5GsDWFh1Gs1cy8VLErE11wkqHVHy/+B772qnLewL6TBT\nXjd8TEBT4ZXosUVuXRIodqrL+QKBgQDASKFXRaaQtjdEOoysXLDdVYY8rMP1IVMR\nvhgqT/6TyfckiK5ydGub4RFI5z9FF8M+v07WC8DKbCT/jmf11kkwwgnoZteCJk1z\ncrTxVOzFSxMJDRgLZgN3Bhdizif11rVy2nGNK9z3wqihi6d15tabmfopx6yLkdhR\niMv5uXVh5wKBgQC0OZLaEESsz7YPyiGdpk4dl8fqOaw1YJ/KM4yuLbrR0Onf3/gd\ngCLby2ScSKF+XcbS/boKnGS7PiQk2sSLlmDe6TInsD49sDrA/btkdfoBbmcbKBvj\nKLUSrhjUhYP4H6PvSc2VpM8C9zPsWaZYxx64W8wowbWcF9n3btzQTKRxIQKBgAET\npwulETS4QID6TvVcI4VpyDGoygQiZqOvy9TY09UiCWdD+K4dZsjdrsoYuWr6ohZE\n3f0m3bKEfoSL2Jsw0wIZ5BJQGR7adg6Sct7zGcxVCks/roXJ0XUmLJVaEDE5PZTi\nEka3GyqsBWO6M3reiw8eAp+fRaEWdP6n5HSGjFi7AoGAHkOgXvO039Rt3uDLFhSe\ne/Qu/b79/wz8p6GMAJFmPLtnJ4TxVUPdF5UE5kRmFFQoRvVS+fdRQ7jmziGams/J\nwZ12IW2RFWcMj58IKoSdt9SoqEqVO2A44Pv6QjHpHGb/En7FOrimIXekPt6ynhX4\nWruar0V1txMbAjECAi6RiZE=\n-----END PRIVATE KEY-----\n",
+  "client_email": "aziende-sottovalutate-659@aziende-sottovalutate.iam.gserviceaccount.com",
+  "client_id": "115080419729568826264",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/aziende-sottovalutate-659%40aziende-sottovalutate.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
