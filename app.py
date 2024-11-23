@@ -155,7 +155,7 @@ def fetch_data():
             companies.append(company_data)
         if i + 5 < len(tickers):  # Attendi solo tra i batch
             print(f"Attesa di 60 secondi prima di elaborare il prossimo batch...")
-            time.sleep(60)
+            time.sleep(40)
 
     green = [c for c in companies if c["Indice G"] != "--" and c["Indice G"] < 1]
     orange = [c for c in companies if c["Indice G"] != "--" and 1 <= c["Indice G"] < 1.5]
