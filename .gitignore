@@ -1,0 +1,3 @@
+echo "stored_data.json" >> .gitignore
+echo "G-Index-Companies/" >> .gitignore
+echo "bfg-1.14.0.jar" >> .gitignore
