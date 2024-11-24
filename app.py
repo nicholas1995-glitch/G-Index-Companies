@@ -5,9 +5,13 @@ from lxml import html
 import random
 import time
 import os
+from flask_socketio import SocketIO, emit
+
 
 app = Flask(__name__)
 CORS(app)  # Abilita CORS per tutte le route
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 
 # Lista aziende con nome completo, ticker e ISIN
 companies_info = {
@@ -153,8 +157,8 @@ def fetch_data():
             company_data["Indice G"] = calculate_g_index(company_data)
             companies.append(company_data)
         if i + 5 < len(tickers):  # Attendi solo tra i batch
-            print(f"Attesa di 60 secondi prima di elaborare il prossimo batch...")
-            time.sleep(40)
+            print(f"Attesa di 1 secondi prima di elaborare il prossimo batch...")
+            time.sleep(1)
 
     green = [c for c in companies if c["Indice G"] != "--" and c["Indice G"] < 1]
     orange = [c for c in companies if c["Indice G"] != "--" and 1 <= c["Indice G"] < 1.5]
@@ -167,6 +171,14 @@ def fetch_data():
     return jsonify({"green": green, "orange": orange, "red": red})
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Usa la porta fornita da Render o la 5000 di default
-    app.run(host="0.0.0.0", port=port, debug=False)
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port, debug=False)
+
+
+@socketio.on("start_fetch")
+def handle_start_fetch():
+    tickers = list(companies_info.keys())
+    for ticker in tickers:
+        company_data = scrape_stock_data(ticker)
+        socketio.emit("update_data", company_data)
 
