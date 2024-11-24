@@ -134,10 +134,10 @@ def scrape_stock_data(ticker):
         tree_stats = html.fromstring(response_stats.content)
         logger.info(f"Risposta ricevuta da {url_stats} (Status Code: {response_stats.status_code})")
 
-        # Aggiorna gli XPath in base alla struttura attuale di Yahoo Finance
-        pe_ratio = tree_main.xpath('//*[@id="quote-summary"]/div[1]/table/tbody/tr[15]/td[2]/text()')
-        pb_ratio = tree_stats.xpath('//*[@id="Col1-0-KeyStatistics-Proxy"]/section/div[1]/div[1]/div[1]/table/tbody/tr[7]/td[2]/text()')
-        peg_ratio = tree_stats.xpath('//*[@id="Col1-0-KeyStatistics-Proxy"]/section/div[1]/div[1]/div[1]/table/tbody/tr[5]/td[2]/text()')
+        # Usa i nuovi XPath
+        pe_ratio = tree_main.xpath('//*[@id="nimbus-app"]/section/section/section/article/div[2]/ul/li[11]/span[2]/fin-streamer/text()')
+        pb_ratio = tree_stats.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[2]/div/table/tbody/tr[7]/td[2]/text()')
+        peg_ratio = tree_stats.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[2]/div/table/tbody/tr[5]/td[2]/text()')
 
         # Aggiungi log dei valori estratti
         logger.debug(f"P/E Ratio estratto: {pe_ratio}")
