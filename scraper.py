@@ -18,6 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 # Percorso del Secret File montato da Render
 FIRESTORE_KEY_PATH = '/etc/secrets/firestore-key.json'
 
@@ -113,6 +114,9 @@ USER_AGENTS = [
     "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
 ]
 
+session = requests.Session()
+session.headers.update({"User-Agent": random.choice(USER_AGENTS)})
+
 def scrape_stock_data(ticker):
     try:
         logger.info(f"Inizio scraping per {ticker}")
@@ -122,14 +126,18 @@ def scrape_stock_data(ticker):
         session = requests.Session()
         session.headers.update({"User-Agent": random.choice(USER_AGENTS)})
 
+        # Richiesta per la pagina principale
         logger.info(f"Richiesta GET a {url_main}")
         response_main = session.get(url_main, timeout=20)
+        time.sleep(2)  # Attendi 2 secondi dopo la richiesta
         response_main.raise_for_status()
         tree_main = html.fromstring(response_main.content)
         logger.info(f"Risposta ricevuta da {url_main} (Status Code: {response_main.status_code})")
 
+        # Richiesta per la pagina delle statistiche
         logger.info(f"Richiesta GET a {url_stats}")
         response_stats = session.get(url_stats, timeout=20)
+        time.sleep(5) # Attendi 2 secondi dopo la richiesta
         response_stats.raise_for_status()
         tree_stats = html.fromstring(response_stats.content)
         logger.info(f"Risposta ricevuta da {url_stats} (Status Code: {response_stats.status_code})")
@@ -170,6 +178,7 @@ def scrape_stock_data(ticker):
             "ISIN": companies_info[ticker]["isin"],
             "Calcolo": "Errore nel calcolo",
         }
+
 
 def calculate_g_index(company):
     try:
