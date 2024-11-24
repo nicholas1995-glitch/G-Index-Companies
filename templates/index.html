@@ -10,6 +10,7 @@
         body {
             background-color: #f4f4f9;
             font-family: Arial, sans-serif;
+            
         }
         h1 {
             text-align: center;
@@ -237,6 +238,30 @@
 
         // Avvia il caricamento dei dati
         fetchDataBatch();
+    
     </script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+
 </body>
+<script>
+    const socket = io();
+
+    socket.on("connect", () => {
+        console.log("Connesso al server.");
+        socket.emit("start_fetch");
+    });
+
+    socket.on("update_data", (company) => {
+        const container = document.getElementById("data-container");
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${company["Full Name"]}</td>
+            <td>${company["Ticker"]}</td>
+            <td>${company["P/E Ratio"]}</td>
+            <td>${company["ISIN"]}</td>
+        `;
+        container.appendChild(row);
+    });
+</script>
+
 </html>
