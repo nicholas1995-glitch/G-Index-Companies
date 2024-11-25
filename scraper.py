@@ -195,7 +195,10 @@ def send_email(file_name):
     # Leggi la password dal file
     try:
         with open(EMAIL_PASSWORD_PATH, 'r') as f:
-            password = f.read().strip()
+            secrets = json.load(f)
+        password = secrets.get("email_password")
+        if not password:
+            raise ValueError("La password email non è stata trovata nel file JSON.")
     except Exception as e:
         logger.error(f"Errore nel caricamento della password email: {e}")
         return
