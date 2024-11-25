@@ -211,22 +211,29 @@ def generate_excel(data):
     """
     logger.info("Inizio generazione file Excel")
     file_name = "dati_aziende.xlsx"
-    date = datetime.now().strftime("%d/%m/%Y")
+    date = datetime.now().strftime("%d-%m-%Y")  # Cambia il separatore per evitare errori
+
+    # Correggi i titoli dei fogli
+    sheet_names = {
+        "P/E": "P_E",
+        "P/BOOK": "P_BOOK",
+        "PEG RATIO 5Y": "PEG_RATIO_5Y"
+    }
 
     if not os.path.exists(file_name):
         wb = openpyxl.Workbook()
         wb.remove(wb.active)
 
-        for sheet_name in ["P/E", "P/BOOK", "PEG RATIO 5Y"]:
-            sheet = wb.create_sheet(sheet_name)
+        for original_title in sheet_names:
+            sheet = wb.create_sheet(sheet_names[original_title])
             sheet.append(["Nome Azienda", "Ticker", date])
 
         wb.save(file_name)
 
     wb = openpyxl.load_workbook(file_name)
 
-    for sheet_name, metric in zip(["P/E", "P/BOOK", "PEG RATIO 5Y"], ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
-        sheet = wb[sheet_name]
+    for original_title, metric in zip(sheet_names, ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
+        sheet = wb[sheet_names[original_title]]
         col = sheet.max_column + 1
         sheet.cell(1, col, date)
 
@@ -238,6 +245,7 @@ def generate_excel(data):
     wb.save(file_name)
     logger.info("File Excel generato con successo")
     return file_name
+
 
 def send_email(file_name):
     """
