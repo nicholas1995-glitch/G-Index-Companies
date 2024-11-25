@@ -244,9 +244,25 @@ def send_email(file_name):
     Invia il file Excel via email.
     """
     logger.info("Inizio invio email")
+    
+    # Percorso del file segreto con la password
+    EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL-PASSWORD'
+    
+    # Leggi la password dal file
+    try:
+        with open(EMAIL_PASSWORD_PATH, 'r') as f:
+            password = f.read().strip()
+    except Exception as e:
+        logger.error(f"Errore nel caricamento della password email: {e}")
+        return
+    
     sender_email = "nicholas.gazzola@gmail.com"
     receiver_email = "nicholas.gazzola@gmail.com"
-    password = "tua_password_email"
+    password = os.getenv("EMAIL_PASSWORD") 
+    
+    if not password:
+        logger.error("La variabile di ambiente EMAIL_PASSWORD non è stata configurata!")
+        return
 
     subject = "Dati aggiornati aziende"
     body = "In allegato trovi i dati aggiornati delle aziende."

@@ -6,6 +6,7 @@ import json
 import logging
 from google.cloud import firestore
 from google.oauth2 import service_account
+from flask import send_file 
 
 app = Flask(__name__)
 CORS(app)  # Abilita CORS per tutte le route
@@ -54,6 +55,23 @@ def load_data():
     except Exception as e:
         logger.error(f"Errore nel caricamento dei dati da Firestore: {e}")
         return {"green": [], "orange": [], "red": []}
+    
+def load_last_update_time():
+    """
+    Recupera l'ora dell'ultimo aggiornamento.
+    """
+    try:
+        doc_ref = db.collection("stored_data").document("metadata")
+        doc = doc_ref.get()
+        if doc.exists:
+            metadata = doc.to_dict()
+            return metadata.get("last_update", "N/A")
+        else:
+            return "Nessun aggiornamento trovato"
+    except Exception as e:
+        logger.error(f"Errore nel recupero dell'ultimo aggiornamento: {e}")
+        return "Errore"
+
 
 @app.route("/")
 def home():
@@ -70,6 +88,37 @@ def fetch_data():
     logger.info("Richiesta di fetch_data ricevuta")
     stored_data = load_data()
     return jsonify(stored_data)
+
+@app.route('/download_excel/<filename>', methods=['GET'])
+def download_excel(filename):
+    """
+    Consente di scaricare i file Excel generati.
+    """
+    file_path = os.path.join('generated_excel', filename)
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    else:
+        return jsonify({"error": "File non trovato"}), 404
+    
+@app.route("/fetch_data", methods=["POST"])
+def fetch_data():
+    """
+    Endpoint per recuperare i dati memorizzati.
+    """
+    logger.info("Richiesta di fetch_data ricevuta")
+    stored_data = load_data()
+    logger.info("Dati inviati al client con successo")
+    return jsonify(stored_data)
+
+@app.route("/last_update", methods=["GET"])
+def last_update():
+    """
+    Endpoint per verificare l'ultimo aggiornamento.
+    """
+    last_update_time = load_last_update_time()
+    return jsonify({"last_update": last_update_time})
+
+
 
 @socketio.on("start_fetch")
 def handle_start_fetch():
