@@ -190,17 +190,16 @@ def send_email(file_name):
     logger.info("Inizio invio email")
     
     # Percorso del file segreto con la password
-    EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL-PASSWORD'
+    EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL_PASSWORD'
     
     # Leggi la password dal file
-    try:
-        with open(EMAIL_PASSWORD_PATH, 'r') as f:
-            secrets = json.load(f)
-        password = secrets.get("email_password")
-        if not password:
-            raise ValueError("La password email non è stata trovata nel file JSON.")
-    except Exception as e:
-        logger.error(f"Errore nel caricamento della password email: {e}")
+    EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL_PASSWORD'  # Assicurati che il nome corrisponda
+try:
+    with open(EMAIL_PASSWORD_PATH, 'r') as f:
+        password = f.read().strip()
+except Exception as e:
+    logger.error(f"Errore nel caricamento della password email: {e}")
+    exit(1)  # Termina l'esecuzione in caso di errore
         return
     
     sender_email = "nicholas.gazzola@gmail.com"
