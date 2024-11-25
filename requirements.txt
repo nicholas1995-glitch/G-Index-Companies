@@ -6,7 +6,7 @@ requests
 lxml
 gunicorn
 openpyxl
-smtplib
+
 
 
  
