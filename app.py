@@ -9,7 +9,7 @@ from google.oauth2 import service_account
 
 app = Flask(__name__)
 CORS(app)  # Abilita CORS per tutte le route
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", ping_timout=120, ping_interval=25)
 
 # Configura il logging
 logging.basicConfig(

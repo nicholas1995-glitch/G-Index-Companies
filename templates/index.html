@@ -10,7 +10,6 @@
         body {
             background-color: #f4f4f9;
             font-family: Arial, sans-serif;
-            
         }
         h1 {
             text-align: center;
@@ -62,9 +61,46 @@
         .highlight-g {
             font-weight: bold;
         }
+        #loading-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            font-family: Arial, sans-serif;
+            color: #333;
+            text-align: center;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+        }
+        #loading-animation {
+            margin: 20px auto 0 auto;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #007bff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 <body>
+    <div id="loading-message">
+        <p>L'applicazione si sta caricando, attendi qualche secondo...</p>
+        <div id="loading-animation"></div>
+    </div>
     <div class="container">
         <h1>G Index Companies</h1>
 
@@ -196,6 +232,7 @@
 
                 // Nascondi il messaggio di caricamento
                 document.getElementById("loading").style.display = "none";
+                document.getElementById("loading-message").style.display = "none";
             } catch (error) {
                 console.error("Errore durante il caricamento dei dati:", error);
                 document.getElementById("loading").innerText = "Errore durante il caricamento dei dati. Riprova più tardi.";
@@ -238,30 +275,27 @@
 
         // Avvia il caricamento dei dati
         fetchDataBatch();
-    
     </script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const socket = io();
 
+        socket.on("connect", () => {
+            console.log("Connesso al server.");
+            socket.emit("start_fetch");
+        });
+
+        socket.on("update_data", (company) => {
+            const container = document.getElementById("data-container");
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${company["Full Name"]}</td>
+                <td>${company["Ticker"]}</td>
+                <td>${company["P/E Ratio"]}</td>
+                <td>${company["ISIN"]}</td>
+            `;
+            container.appendChild(row);
+        });
+    </script>
 </body>
-<script>
-    const socket = io();
-
-    socket.on("connect", () => {
-        console.log("Connesso al server.");
-        socket.emit("start_fetch");
-    });
-
-    socket.on("update_data", (company) => {
-        const container = document.getElementById("data-container");
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${company["Full Name"]}</td>
-            <td>${company["Ticker"]}</td>
-            <td>${company["P/E Ratio"]}</td>
-            <td>${company["ISIN"]}</td>
-        `;
-        container.appendChild(row);
-    });
-</script>
-
 </html>
