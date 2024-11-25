@@ -193,24 +193,16 @@ def send_email(file_name):
     EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL_PASSWORD'
     
     # Leggi la password dal file
-    EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL_PASSWORD'  # Assicurati che il nome corrisponda
-try:
-    with open(EMAIL_PASSWORD_PATH, 'r') as f:
-        password = f.read().strip()
-except Exception as e:
-    logger.error(f"Errore nel caricamento della password email: {e}")
-    exit(1)  # Termina l'esecuzione in caso di errore
-        return
+    try:
+        with open(EMAIL_PASSWORD_PATH, 'r') as f:
+            password = f.read().strip()  # Usa .strip() per rimuovere eventuali spazi extra
+    except Exception as e:
+        logger.error(f"Errore nel caricamento della password email: {e}")
+        exit(1)  # Termina l'esecuzione in caso di errore
     
     sender_email = "nicholas.gazzola@gmail.com"
     receiver_email = "nicholas.gazzola@gmail.com"
-    password = os.getenv("EMAIL_PASSWORD") 
     
-    # Verifica se il file segreto esiste
-if not os.path.exists(EMAIL_PASSWORD_PATH):
-    logger.error(f"Il file segreto non esiste: {EMAIL_PASSWORD_PATH}")
-    raise FileNotFoundError(f"Il file segreto {EMAIL_PASSWORD_PATH} non è stato trovato!")
-
     subject = "Dati aggiornati aziende"
     body = "In allegato trovi i dati aggiornati delle aziende."
 
@@ -220,6 +212,7 @@ if not os.path.exists(EMAIL_PASSWORD_PATH):
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
 
+    # Aggiungi l'allegato
     with open(file_name, "rb") as attachment:
         part = MIMEBase("application", "octet-stream")
         part.set_payload(attachment.read())
@@ -227,6 +220,7 @@ if not os.path.exists(EMAIL_PASSWORD_PATH):
     part.add_header("Content-Disposition", f"attachment; filename={file_name}")
     msg.attach(part)
 
+    # Invio email
     try:
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
@@ -235,6 +229,7 @@ if not os.path.exists(EMAIL_PASSWORD_PATH):
             logger.info("Email inviata con successo")
     except Exception as e:
         logger.error(f"Errore nell'invio dell'email: {e}")
+
 
 def update_data():
     """
