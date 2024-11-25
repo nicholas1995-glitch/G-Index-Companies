@@ -206,9 +206,10 @@ except Exception as e:
     receiver_email = "nicholas.gazzola@gmail.com"
     password = os.getenv("EMAIL_PASSWORD") 
     
-    if not password:
-        logger.error("La variabile di ambiente EMAIL_PASSWORD non è stata configurata!")
-        return
+    # Verifica se il file segreto esiste
+if not os.path.exists(EMAIL_PASSWORD_PATH):
+    logger.error(f"Il file segreto non esiste: {EMAIL_PASSWORD_PATH}")
+    raise FileNotFoundError(f"Il file segreto {EMAIL_PASSWORD_PATH} non è stato trovato!")
 
     subject = "Dati aggiornati aziende"
     body = "In allegato trovi i dati aggiornati delle aziende."
