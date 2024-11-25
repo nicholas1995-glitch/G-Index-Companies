@@ -5,6 +5,9 @@ flask-socketio
 requests
 lxml
 gunicorn
+openpyxl
+smtplib
+
 
  
  
