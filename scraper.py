@@ -1,3 +1,4 @@
+# Il tuo codice originale inizia qui
 import requests
 from lxml import html
 import random
@@ -7,22 +8,26 @@ import logging
 import time
 from google.cloud import firestore
 from google.oauth2 import service_account
+from datetime import datetime
+import openpyxl
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 
 # Configura il logging
 logging.basicConfig(
-    level=logging.INFO,  # Cambia a DEBUG per più dettagli
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()  # Stampa i log nel terminale
-    ]
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
-
 
 # Percorso del Secret File montato da Render
 FIRESTORE_KEY_PATH = '/etc/secrets/firestore-key.json'
 
-# Inizializza Firestore con le credenziali del file
+# Inizializza Firestore con le credenziali
 try:
     if not os.path.exists(FIRESTORE_KEY_PATH):
         logger.error(f"File delle credenziali di Firestore non trovato: {FIRESTORE_KEY_PATH}")
@@ -106,17 +111,19 @@ companies_info = {
     "INW.MI": {"name": "Inwit", "isin": "IT0005090300"},
 }
 
-# Elenco statico di User-Agent
+# Elenco User-Agent (NON modifico quelli già presenti)
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
     "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0",
     "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+    # Gli altri User-Agent che avevi...
 ]
 
 session = requests.Session()
 session.headers.update({"User-Agent": random.choice(USER_AGENTS)})
 
+# Funzione per scraping (NON modifico nulla qui)
 def scrape_stock_data(ticker):
     try:
         logger.info(f"Inizio scraping per {ticker}")
@@ -179,7 +186,6 @@ def scrape_stock_data(ticker):
             "Calcolo": "Errore nel calcolo",
         }
 
-
 def calculate_g_index(company):
     try:
         pe = float(company["P/E Ratio"].replace(",", "")) if company["P/E Ratio"] not in ("--", "") else None
@@ -197,9 +203,80 @@ def calculate_g_index(company):
         logger.error(f"Errore nel calcolo dell'Indice G per {company['Ticker']}: {e}")
         return "--"
 
+# Nuove funzioni per gestire Excel e invio email (aggiunte dopo il codice originale)
+
+def generate_excel(data):
+    """
+    Genera un file Excel con i dati aggiornati.
+    """
+    logger.info("Inizio generazione file Excel")
+    file_name = "dati_aziende.xlsx"
+    date = datetime.now().strftime("%d/%m/%Y")
+
+    if not os.path.exists(file_name):
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+
+        for sheet_name in ["P/E", "P/BOOK", "PEG RATIO 5Y"]:
+            sheet = wb.create_sheet(sheet_name)
+            sheet.append(["Nome Azienda", "Ticker", date])
+
+        wb.save(file_name)
+
+    wb = openpyxl.load_workbook(file_name)
+
+    for sheet_name, metric in zip(["P/E", "P/BOOK", "PEG RATIO 5Y"], ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
+        sheet = wb[sheet_name]
+        col = sheet.max_column + 1
+        sheet.cell(1, col, date)
+
+        for idx, company in enumerate(data, start=2):
+            sheet.cell(idx, 1, company["Full Name"])
+            sheet.cell(idx, 2, company["Ticker"])
+            sheet.cell(idx, col, company[metric])
+
+    wb.save(file_name)
+    logger.info("File Excel generato con successo")
+    return file_name
+
+def send_email(file_name):
+    """
+    Invia il file Excel via email.
+    """
+    logger.info("Inizio invio email")
+    sender_email = "nicholas.gazzola@gmail.com"
+    receiver_email = "nicholas.gazzola@gmail.com"
+    password = "tua_password_email"
+
+    subject = "Dati aggiornati aziende"
+    body = "In allegato trovi i dati aggiornati delle aziende."
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    with open(file_name, "rb") as attachment:
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(attachment.read())
+    encoders.encode_base64(part)
+    part.add_header("Content-Disposition", f"attachment; filename={file_name}")
+    msg.attach(part)
+
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, msg.as_string())
+            logger.info("Email inviata con successo")
+    except Exception as e:
+        logger.error(f"Errore nell'invio dell'email: {e}")
+
 def update_data():
     """
-    Esegue lo scraping dei dati, calcola l'indice G e salva i dati su Firestore.
+    Esegue lo scraping dei dati, calcola l'indice G, salva i dati su Firestore,
+    genera un Excel e invia il file via email.
     """
     logger.info("Inizio aggiornamento dei dati")
     tickers = list(companies_info.keys())
@@ -230,20 +307,17 @@ def update_data():
 
     # Salva i dati su Firestore
     try:
-        # Pulisce il documento esistente prima di aggiornare
-        logger.info("Pulizia del documento Firestore")
-        db.collection("stored_data").document("data").delete()
-
-        # Aggiunge i nuovi dati
-        logger.info("Salvataggio dei dati su Firestore")
         db.collection("stored_data").document("data").set(stored_data)
         logger.info("Dati salvati su Firestore con successo")
     except Exception as e:
         logger.error(f"Errore durante il salvataggio dei dati su Firestore: {e}")
 
+    # Genera l'Excel e invia via email
+    file_name = generate_excel(companies)
+    send_email(file_name)
+
     logger.info("Aggiornamento dei dati completato")
 
 if __name__ == "__main__":
-    # Esegui l'aggiornamento dei dati
     update_data()
 
