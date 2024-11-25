@@ -87,6 +87,7 @@ def fetch_data():
     """
     logger.info("Richiesta di fetch_data ricevuta")
     stored_data = load_data()
+    logger.info("Dati inviati al client con successo")
     return jsonify(stored_data)
 
 @app.route('/download_excel/<filename>', methods=['GET'])
@@ -100,15 +101,6 @@ def download_excel(filename):
     else:
         return jsonify({"error": "File non trovato"}), 404
     
-@app.route("/fetch_data", methods=["POST"])
-def fetch_data():
-    """
-    Endpoint per recuperare i dati memorizzati.
-    """
-    logger.info("Richiesta di fetch_data ricevuta")
-    stored_data = load_data()
-    logger.info("Dati inviati al client con successo")
-    return jsonify(stored_data)
 
 @app.route("/last_update", methods=["GET"])
 def last_update():
