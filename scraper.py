@@ -254,24 +254,19 @@ def send_email(file_name):
     logger.info("Inizio invio email")
     
     # Percorso del file segreto con la password
-    EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL-PASSWORD'
+    EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL_PASSWORD'
     
     # Leggi la password dal file
     try:
         with open(EMAIL_PASSWORD_PATH, 'r') as f:
-            password = f.read().strip()
+            password = f.read().strip()  # Usa .strip() per rimuovere eventuali spazi extra
     except Exception as e:
         logger.error(f"Errore nel caricamento della password email: {e}")
-        return
+        exit(1)  # Termina l'esecuzione in caso di errore
     
     sender_email = "nicholas.gazzola@gmail.com"
     receiver_email = "nicholas.gazzola@gmail.com"
-    password = os.getenv("EMAIL_PASSWORD") 
     
-    if not password:
-        logger.error("La variabile di ambiente EMAIL_PASSWORD non è stata configurata!")
-        return
-
     subject = "Dati aggiornati aziende"
     body = "In allegato trovi i dati aggiornati delle aziende."
 
@@ -281,6 +276,7 @@ def send_email(file_name):
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
 
+    # Aggiungi l'allegato
     with open(file_name, "rb") as attachment:
         part = MIMEBase("application", "octet-stream")
         part.set_payload(attachment.read())
@@ -288,6 +284,7 @@ def send_email(file_name):
     part.add_header("Content-Disposition", f"attachment; filename={file_name}")
     msg.attach(part)
 
+    # Invio email
     try:
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
@@ -296,6 +293,7 @@ def send_email(file_name):
             logger.info("Email inviata con successo")
     except Exception as e:
         logger.error(f"Errore nell'invio dell'email: {e}")
+
 
 def update_data():
     """
@@ -344,4 +342,3 @@ def update_data():
 
 if __name__ == "__main__":
     update_data()
-
