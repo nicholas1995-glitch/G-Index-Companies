@@ -207,7 +207,7 @@ def calculate_g_index(company):
 
 def generate_excel(data):
     """
-    Genera un file Excel con i dati aggiornati.
+    Genera un file Excel con i dati aggiornati e preserva quelli vecchi.
     """
     logger.info("Inizio generazione file Excel")
     file_name = "dati_aziende.xlsx"
@@ -220,31 +220,46 @@ def generate_excel(data):
         "PEG RATIO 5Y": "PEG_RATIO_5Y"
     }
 
-    if not os.path.exists(file_name):
-        wb = openpyxl.Workbook()
-        wb.remove(wb.active)
+    try:
+        # Se il file non esiste, crealo
+        if not os.path.exists(file_name):
+            wb = openpyxl.Workbook()
+            wb.remove(wb.active)
 
-        for original_title in sheet_names:
-            sheet = wb.create_sheet(sheet_names[original_title])
-            sheet.append(["Nome Azienda", "Ticker", date])
+            # Crea i fogli e aggiungi le intestazioni
+            for original_title in sheet_names:
+                sheet = wb.create_sheet(sheet_names[original_title])
+                sheet.append(["Nome Azienda", "Ticker", date])
 
+            wb.save(file_name)
+            logger.info("File Excel creato ex novo")
+
+        # Carica il file esistente
+        wb = openpyxl.load_workbook(file_name)
+
+        # Aggiungi i dati ai fogli esistenti
+        for original_title, metric in zip(sheet_names, ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
+            sheet = wb[sheet_names[original_title]]
+
+            # Aggiungi una nuova colonna per la data
+            col = sheet.max_column + 1
+            sheet.cell(1, col, date)
+
+            # Aggiungi i dati aziendali
+            for idx, company in enumerate(data, start=2):
+                sheet.cell(idx, 1, company["Full Name"])  # Nome azienda
+                sheet.cell(idx, 2, company["Ticker"])     # Ticker
+                sheet.cell(idx, col, company[metric])     # Valore aggiornato
+
+        # Salva il file aggiornato
         wb.save(file_name)
+        logger.info("File Excel aggiornato con successo")
+    except Exception as e:
+        logger.error(f"Errore durante la generazione del file Excel: {e}")
+        raise e
 
-    wb = openpyxl.load_workbook(file_name)
-
-    for original_title, metric in zip(sheet_names, ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
-        sheet = wb[sheet_names[original_title]]
-        col = sheet.max_column + 1
-        sheet.cell(1, col, date)
-
-        for idx, company in enumerate(data, start=2):
-            sheet.cell(idx, 1, company["Full Name"])
-            sheet.cell(idx, 2, company["Ticker"])
-            sheet.cell(idx, col, company[metric])
-
-    wb.save(file_name)
-    logger.info("File Excel generato con successo")
     return file_name
+
 
 
 def send_email(file_name):
