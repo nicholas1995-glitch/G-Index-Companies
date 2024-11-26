@@ -207,11 +207,11 @@ def calculate_g_index(company):
 
 def generate_excel(data):
     """
-    Genera un file Excel con i dati aggiornati e preserva quelli vecchi.
+    Genera un file Excel con i dati aggiornati senza duplicare le colonne per la stessa data.
     """
     logger.info("Inizio generazione file Excel")
     file_name = "dati_aziende.xlsx"
-    date = datetime.now().strftime("%d-%m-%Y")  # Cambia il separatore per evitare errori
+    date = datetime.now().strftime("%d-%m-%Y")  # Usa formato con separatore '-'
 
     # Correggi i titoli dei fogli
     sheet_names = {
@@ -220,45 +220,40 @@ def generate_excel(data):
         "PEG RATIO 5Y": "PEG_RATIO_5Y"
     }
 
-    try:
-        # Se il file non esiste, crealo
-        if not os.path.exists(file_name):
-            wb = openpyxl.Workbook()
-            wb.remove(wb.active)
+    if not os.path.exists(file_name):
+        # Crea un nuovo file Excel se non esiste
+        wb = openpyxl.Workbook()
+        wb.remove(wb.active)
+        for original_title in sheet_names:
+            sheet = wb.create_sheet(sheet_names[original_title])
+            sheet.append(["Nome Azienda", "Ticker", date])  # Intestazione iniziale
+        wb.save(file_name)
 
-            # Crea i fogli e aggiungi le intestazioni
-            for original_title in sheet_names:
-                sheet = wb.create_sheet(sheet_names[original_title])
-                sheet.append(["Nome Azienda", "Ticker", date])
+    wb = openpyxl.load_workbook(file_name)
 
-            wb.save(file_name)
-            logger.info("File Excel creato ex novo")
+    for original_title, metric in zip(sheet_names, ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
+        sheet = wb[sheet_names[original_title]]
 
-        # Carica il file esistente
-        wb = openpyxl.load_workbook(file_name)
-
-        # Aggiungi i dati ai fogli esistenti
-        for original_title, metric in zip(sheet_names, ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
-            sheet = wb[sheet_names[original_title]]
-
-            # Aggiungi una nuova colonna per la data
-            col = sheet.max_column + 1
+        # Controlla se la data corrente è già presente come intestazione
+        headers = [cell.value for cell in sheet[1]]
+        if date in headers:
+            col = headers.index(date) + 1  # Trova la colonna esistente
+        else:
+            col = sheet.max_column + 1  # Aggiungi una nuova colonna
             sheet.cell(1, col, date)
 
-            # Aggiungi i dati aziendali
-            for idx, company in enumerate(data, start=2):
-                sheet.cell(idx, 1, company["Full Name"])  # Nome azienda
-                sheet.cell(idx, 2, company["Ticker"])     # Ticker
-                sheet.cell(idx, col, company[metric])     # Valore aggiornato
+        for idx, company in enumerate(data, start=2):
+            sheet.cell(idx, 1, company["Full Name"])
+            sheet.cell(idx, 2, company["Ticker"])
+            sheet.cell(idx, col, company[metric])
 
-        # Salva il file aggiornato
-        wb.save(file_name)
-        logger.info("File Excel aggiornato con successo")
-    except Exception as e:
-        logger.error(f"Errore durante la generazione del file Excel: {e}")
-        raise e
-
+    wb.save(file_name)
+    logger.info("File Excel generato correttamente senza duplicati")
     return file_name
+
+# Esegui la funzione aggiornata con dati di esempio per verificare il comportamento
+generate_excel([])  # Placeholder per i dati effettivi
+
 
 
 
