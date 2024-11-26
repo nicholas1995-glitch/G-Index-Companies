@@ -142,7 +142,7 @@ def scrape_stock_data(ticker):
         logger.info(f"Risposta ricevuta da {url_main} (Status Code: {response_main.status_code})")
         
         # XPath per il prezzo
-        prezzo = tree_main.xpath('//*[@id="nimbus-app"]/section/section/section/article/div[2]/ul/li[2]/span[2]/fin-streamer')
+        prezzo = tree_main.xpath('//*[@id="nimbus-app"]/section/section/section/article/div[2]/ul/li[2]/span[2]/fin-streamer/text()')
 
         # Richiesta per la pagina delle statistiche
         logger.info(f"Richiesta GET a {url_stats}")
