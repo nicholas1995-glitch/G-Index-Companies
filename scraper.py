@@ -123,7 +123,7 @@ USER_AGENTS = [
 session = requests.Session()
 session.headers.update({"User-Agent": random.choice(USER_AGENTS)})
 
-# Funzione per scraping (NON modifico nulla qui)
+# Funzione per scraping 
 def scrape_stock_data(ticker):
     try:
         logger.info(f"Inizio scraping per {ticker}")
@@ -140,6 +140,9 @@ def scrape_stock_data(ticker):
         response_main.raise_for_status()
         tree_main = html.fromstring(response_main.content)
         logger.info(f"Risposta ricevuta da {url_main} (Status Code: {response_main.status_code})")
+        
+        # XPath per il prezzo
+        prezzo = tree_main.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[1]/div[2]/div[1]/section/div/section/div[1]/fin-streamer[1]/text()')
 
         # Richiesta per la pagina delle statistiche
         logger.info(f"Richiesta GET a {url_stats}")
@@ -169,6 +172,7 @@ def scrape_stock_data(ticker):
             "P/E Ratio": pe_ratio[0].strip() if pe_ratio else "--",
             "P/Book Ratio": pb_ratio[0].strip() if pb_ratio else "--",
             "PEG Ratio (5y)": peg_ratio[0].strip() if peg_ratio else "--",
+            "Prezzo": prezzo[0].strip() if prezzo else "--", 
             "Ticker": ticker,
             "Full Name": companies_info[ticker]["name"],
             "ISIN": companies_info[ticker]["isin"],
@@ -180,6 +184,7 @@ def scrape_stock_data(ticker):
             "P/E Ratio": "--",
             "P/Book Ratio": "--",
             "PEG Ratio (5y)": "--",
+            "Prezzo": "--",
             "Ticker": ticker,
             "Full Name": companies_info[ticker]["name"],
             "ISIN": companies_info[ticker]["isin"],
@@ -207,52 +212,58 @@ def calculate_g_index(company):
 
 def generate_excel(data):
     """
-    Genera un file Excel con i dati aggiornati senza duplicare le colonne per la stessa data.
+    Genera un file Excel con i dati aggiornati, inclusi prezzo e indice G.
     """
     logger.info("Inizio generazione file Excel")
     file_name = "dati_aziende.xlsx"
-    date = datetime.now().strftime("%d-%m-%Y")  # Usa formato con separatore '-'
+    date = datetime.now().strftime("%d-%m-%Y %H:%M")  # Aggiungi ora e minuti al timestamp
 
     # Correggi i titoli dei fogli
     sheet_names = {
         "P/E": "P_E",
         "P/BOOK": "P_BOOK",
-        "PEG RATIO 5Y": "PEG_RATIO_5Y"
+        "PEG RATIO 5Y": "PEG_RATIO_5Y",
+        "PREZZO": "PREZZO",
+        "INDICE_G": "INDICE_G"
     }
 
+    # Crea il file Excel se non esiste
     if not os.path.exists(file_name):
-        # Crea un nuovo file Excel se non esiste
         wb = openpyxl.Workbook()
-        wb.remove(wb.active)
+        wb.remove(wb.active)  # Rimuovi il foglio di default
+
         for original_title in sheet_names:
             sheet = wb.create_sheet(sheet_names[original_title])
             sheet.append(["Nome Azienda", "Ticker", date])  # Intestazione iniziale
+
         wb.save(file_name)
 
     wb = openpyxl.load_workbook(file_name)
 
-    for original_title, metric in zip(sheet_names, ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
+    # Aggiorna ciascun foglio
+    for original_title, metric in zip(
+        sheet_names,
+        ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)", "Prezzo", "Indice G"]
+    ):
         sheet = wb[sheet_names[original_title]]
-
-        # Controlla se la data corrente è già presente come intestazione
-        headers = [cell.value for cell in sheet[1]]
-        if date in headers:
-            col = headers.index(date) + 1  # Trova la colonna esistente
-        else:
-            col = sheet.max_column + 1  # Aggiungi una nuova colonna
-            sheet.cell(1, col, date)
+        col = sheet.max_column + 1
+        sheet.cell(1, col, date)  # Aggiungi una nuova colonna con il timestamp
 
         for idx, company in enumerate(data, start=2):
-            sheet.cell(idx, 1, company["Full Name"])
-            sheet.cell(idx, 2, company["Ticker"])
-            sheet.cell(idx, col, company[metric])
+            sheet.cell(idx, 1, company["Full Name"])  # Nome azienda
+            sheet.cell(idx, 2, company["Ticker"])  # Ticker
+            if metric == "Prezzo":
+                sheet.cell(idx, col, company.get("Prezzo", "--"))  # Prezzo
+            elif metric == "Indice G":
+                sheet.cell(idx, col, company.get("Indice G", "--"))  # Indice G
+            else:
+                sheet.cell(idx, col, company.get(metric, "--"))  # Altri dati
 
     wb.save(file_name)
-    logger.info("File Excel generato correttamente senza duplicati")
+    logger.info("File Excel generato con successo")
     return file_name
 
-# Esegui la funzione aggiornata con dati di esempio per verificare il comportamento
-generate_excel([])  # Placeholder per i dati effettivi
+
 
 
 
