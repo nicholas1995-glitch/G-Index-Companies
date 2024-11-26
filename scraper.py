@@ -188,9 +188,9 @@ def scrape_stock_data(ticker):
 
 def calculate_g_index(company):
     try:
-        pe = float(company["P/E Ratio"].replace(",", "")) if company["P/E Ratio"] not in ("--", "") else None
-        pb = float(company["P/Book Ratio"].replace(",", "")) if company["P/Book Ratio"] not in ("--", "") else None
-        peg = float(company["PEG Ratio (5y)"].replace(",", "")) if company["PEG Ratio (5y)"] not in ("--", "") else None
+        pe = float(company["P/E Ratio"].replace(",", ".")) if company["P/E Ratio"] not in ("--", "") else None
+        pb = float(company["P/Book Ratio"].replace(",", ".")) if company["P/Book Ratio"] not in ("--", "") else None
+        peg = float(company["PEG Ratio (5y)"].replace(",", ".")) if company["PEG Ratio (5y)"] not in ("--", "") else None
 
         # Verifica se tutti i valori sono disponibili
         if pe is None or pb is None or peg is None:
