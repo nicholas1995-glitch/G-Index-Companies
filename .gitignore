@@ -1,3 +1,12 @@
 echo "stored_data.json" >> .gitignore
 echo "G-Index-Companies/" >> .gitignore
 echo "bfg-1.14.0.jar" >> .gitignore
+# Ignora le credenziali di Firestore
+/etc/secrets/
+firestore-key.json
+
+# Ignora altri file sensibili
+*.env
+*.pyc
+__pycache__/
+

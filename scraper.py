@@ -109,7 +109,7 @@ companies_info = {
     "REC.MI": {"name": "Recordati", "isin": "IT0003828271"},
     "MONC.MI": {"name": "Moncler", "isin": "IT0004965148"},
     "INW.MI": {"name": "Inwit", "isin": "IT0005090300"},
-    }
+}
 
 # Elenco User-Agent (NON modifico quelli già presenti)
 USER_AGENTS = [
@@ -144,7 +144,7 @@ def scrape_stock_data(ticker):
         # Richiesta per la pagina delle statistiche
         logger.info(f"Richiesta GET a {url_stats}")
         response_stats = session.get(url_stats, timeout=20)
-        time.sleep(5) # Attendi 2 secondi dopo la richiesta
+        time.sleep(5) # Attendi 5 secondi dopo la richiesta
         response_stats.raise_for_status()
         tree_stats = html.fromstring(response_stats.content)
         logger.info(f"Risposta ricevuta da {url_stats} (Status Code: {response_stats.status_code})")
@@ -207,7 +207,7 @@ def calculate_g_index(company):
 
 def generate_excel(data):
     """
-    Genera un file Excel con i dati aggiornati.
+    Genera un file Excel con i dati aggiornati, includendo una nuova sheet per l'Indice G.
     """
     logger.info("Inizio generazione file Excel")
     file_name = "dati_aziende.xlsx"
@@ -217,22 +217,29 @@ def generate_excel(data):
     sheet_names = {
         "P/E": "P_E",
         "P/BOOK": "P_BOOK",
-        "PEG RATIO 5Y": "PEG_RATIO_5Y"
+        "PEG RATIO 5Y": "PEG_RATIO_5Y",
+        "Indice G": "Indice_G"  # Aggiungi la nuova sheet
     }
 
+    # Crea il file Excel se non esiste
     if not os.path.exists(file_name):
         wb = openpyxl.Workbook()
         wb.remove(wb.active)
 
         for original_title in sheet_names:
             sheet = wb.create_sheet(sheet_names[original_title])
-            sheet.append(["Nome Azienda", "Ticker", date])
+            if original_title != "Indice G":
+                sheet.append(["Nome Azienda", "Ticker", date])
+            else:
+                sheet.append(["Nome Azienda", "Ticker", "Indice G", date])
 
         wb.save(file_name)
 
+    # Carica il workbook esistente
     wb = openpyxl.load_workbook(file_name)
 
-    for original_title, metric in zip(sheet_names, ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
+    # Aggiorna le sheet P/E, P/Book e PEG Ratio
+    for original_title, metric in zip(["P/E", "P/BOOK", "PEG RATIO 5Y"], ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
         sheet = wb[sheet_names[original_title]]
         col = sheet.max_column + 1
         sheet.cell(1, col, date)
@@ -240,7 +247,41 @@ def generate_excel(data):
         for idx, company in enumerate(data, start=2):
             sheet.cell(idx, 1, company["Full Name"])
             sheet.cell(idx, 2, company["Ticker"])
-            sheet.cell(idx, col, company[metric])
+            value = company[metric]
+            if value != "--":
+                try:
+                    value = float(value.replace(",", "."))  # Converti in float
+                except:
+                    pass
+            cell = sheet.cell(idx, col, value)
+            if isinstance(value, float):
+                cell.number_format = '0.00'  # Imposta il formato con due decimali
+
+    # Aggiungi o aggiorna la sheet Indice_G
+    sheet_g = wb[sheet_names["Indice G"]] if sheet_names["Indice G"] in wb.sheetnames else wb.create_sheet(sheet_names["Indice G"])
+    if sheet_g.max_row == 1 and sheet_g.max_column == 1:
+        # Scrivi l'intestazione solo se la sheet è nuova
+        sheet_g.append(["Nome Azienda", "Ticker", "Indice G", date])
+
+    for company in data:
+        nome = company["Full Name"]
+        ticker = company["Ticker"]
+        indice_g = company["Indice G"]
+
+        # Cerca se la riga esiste già
+        row = None
+        for r in range(2, sheet_g.max_row + 1):
+            if sheet_g.cell(r, 2).value == ticker:
+                row = r
+                break
+
+        if row:
+            # Aggiorna la riga esistente
+            sheet_g.cell(row, 3, indice_g)
+            sheet_g.cell(row, 4, date)
+        else:
+            # Aggiungi una nuova riga
+            sheet_g.append([nome, ticker, indice_g, date])
 
     wb.save(file_name)
     logger.info("File Excel generato con successo")
@@ -294,6 +335,176 @@ def send_email(file_name):
     except Exception as e:
         logger.error(f"Errore nell'invio dell'email: {e}")
 
+# Nuove funzioni aggiunte per gestire categorie e notifiche (Aggiunte qui)
+
+def get_previous_ticker_categories():
+    """
+    Recupera le liste precedenti dei ticker per tutte e tre le categorie da Firestore.
+    """
+    try:
+        doc_ref = db.collection("ticker_categories")
+        docs = doc_ref.stream()
+        previous = {}
+        for doc in docs:
+            previous[doc.id] = doc.to_dict()
+        if not previous:
+            logger.info("Nessun dato precedente trovato per ticker_categories.")
+        return previous
+    except Exception as e:
+        logger.error(f"Errore nel recuperare ticker_categories da Firestore: {e}")
+        return {}
+
+def update_ticker_categories(new_green, new_orange, new_red):
+    """
+    Aggiorna le liste dei ticker per tutte e tre le categorie in Firestore.
+    """
+    try:
+        doc_ref_green = db.collection("ticker_categories").document("green")
+        doc_ref_orange = db.collection("ticker_categories").document("orange")
+        doc_ref_red = db.collection("ticker_categories").document("red")
+        
+        green_dict = {company["Ticker"]: company["Indice G"] for company in new_green}
+        orange_dict = {company["Ticker"]: company["Indice G"] for company in new_orange}
+        red_dict = {company["Ticker"]: company["Indice G"] for company in new_red}
+        
+        doc_ref_green.set(green_dict)
+        doc_ref_orange.set(orange_dict)
+        doc_ref_red.set(red_dict)
+        
+        logger.info("Liste ticker_categories aggiornate in Firestore.")
+    except Exception as e:
+        logger.error(f"Errore nell'aggiornare ticker_categories in Firestore: {e}")
+
+def compare_ticker_categories(previous, current):
+    """
+    Confronta le liste precedente e corrente dei ticker per tutte e tre le categorie.
+    Ritorna un dizionario con entrate, uscite e trasferimenti.
+    """
+    categories = ['green', 'orange', 'red']
+    changes = {
+        'entered': [],
+        'exited': [],
+        'transferred': []
+    }
+    
+    # Creiamo un dizionario che mappa ticker a categorie precedenti
+    ticker_to_previous_category = {}
+    for category in categories:
+        if category in previous:
+            for ticker in previous[category]:
+                ticker_to_previous_category[ticker] = category
+    
+    # Creiamo un dizionario che mappa ticker a categorie correnti
+    ticker_to_current_category = {}
+    for category in categories:
+        if category in current:
+            for ticker in current[category]:
+                ticker_to_current_category[ticker] = category
+    
+    # Ticker attuali e precedenti
+    current_tickers = set(ticker_to_current_category.keys())
+    previous_tickers = set(ticker_to_previous_category.keys())
+    
+    # Identificare i ticker entrati (presenti ora ma non prima)
+    entered_tickers = current_tickers - previous_tickers
+    for ticker in entered_tickers:
+        category = ticker_to_current_category[ticker]
+        indice_g = current[category][ticker]
+        changes['entered'].append({
+            'Ticker': ticker,
+            'Categoria': category,
+            'Indice G': indice_g
+        })
+    
+    # Identificare i ticker usciti (presenti prima ma non ora)
+    exited_tickers = previous_tickers - current_tickers
+    for ticker in exited_tickers:
+        category = ticker_to_previous_category[ticker]
+        indice_g = previous[category][ticker]
+        changes['exited'].append({
+            'Ticker': ticker,
+            'Categoria': category,
+            'Indice G': indice_g
+        })
+    
+    # Identificare i ticker trasferiti (presente in entrambe ma categoria diversa)
+    common_tickers = current_tickers & previous_tickers
+    for ticker in common_tickers:
+        previous_category = ticker_to_previous_category[ticker]
+        current_category = ticker_to_current_category[ticker]
+        if previous_category != current_category:
+            changes['transferred'].append({
+                'Ticker': ticker,
+                'Da': previous_category,
+                'A': current_category,
+                'Indice G': current[current_category][ticker]  # Corretto da 'category' a 'current_category'
+            })
+    
+    return changes
+
+def send_change_notification(changes):
+    """
+    Invia un'email notificando le modifiche nelle liste delle categorie.
+    """
+    if not changes['entered'] and not changes['exited'] and not changes['transferred']:
+        logger.info("Nessuna modifica nelle liste delle categorie.")
+        return
+
+    logger.info("Invio notifica via email per modifiche nelle liste delle categorie.")
+
+    # Percorso del file segreto con la password
+    EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL_PASSWORD'
+
+    # Leggi la password dal file
+    try:
+        with open(EMAIL_PASSWORD_PATH, 'r') as f:
+            password = f.read().strip()
+    except Exception as e:
+        logger.error(f"Errore nel caricamento della password email: {e}")
+        return
+
+    sender_email = "nicholas.gazzola@gmail.com"
+    receiver_email = "nicholas.gazzola@gmail.com"
+
+    subject = "Aggiornamenti nelle Liste delle Aziende"
+
+    body = "Ci sono stati aggiornamenti nelle liste delle aziende:\n\n"
+
+    if changes['entered']:
+        body += "**Aziende Entrate nelle Liste:**\n"
+        for company in changes['entered']:
+            body += f"- {company['Ticker']} nella categoria **{company['Categoria'].capitalize()}** con Indice G: {company['Indice G']}\n"
+        body += "\n"
+
+    if changes['exited']:
+        body += "**Aziende Uscite dalle Liste:**\n"
+        for company in changes['exited']:
+            body += f"- {company['Ticker']} dalla categoria **{company['Categoria'].capitalize()}** con Indice G: {company['Indice G']}\n"
+        body += "\n"
+
+    if changes['transferred']:
+        body += "**Aziende Trasferite tra le Liste:**\n"
+        for company in changes['transferred']:
+            body += f"- {company['Ticker']} da **{company['Da'].capitalize()}** a **{company['A'].capitalize()}** con Indice G: {company['Indice G']}\n"
+        body += "\n"
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    # Invio email
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, msg.as_string())
+            logger.info("Email di notifica inviata con successo.")
+    except Exception as e:
+        logger.error(f"Errore nell'invio dell'email di notifica: {e}")
+
+# Funzioni esistenti rimangono inalterate
 
 def update_data():
     """
@@ -326,6 +537,26 @@ def update_data():
     red.sort(key=lambda x: x["Indice G"])
 
     stored_data = {"green": green, "orange": orange, "red": red}
+
+    # Nuove aggiunte: Gestione delle categorie e notifiche
+    # Recupera le liste precedenti delle categorie
+    previous_categories = get_previous_ticker_categories()
+
+    # Costruisci il dizionario delle categorie correnti
+    current_categories = {
+        "green": {company["Ticker"]: company["Indice G"] for company in green},
+        "orange": {company["Ticker"]: company["Indice G"] for company in orange},
+        "red": {company["Ticker"]: company["Indice G"] for company in red}
+    }
+
+    # Confronta le categorie
+    changes = compare_ticker_categories(previous_categories, current_categories)
+
+    # Aggiorna le categorie in Firestore
+    update_ticker_categories(green, orange, red)
+
+    # Invia notifiche via email se ci sono cambiamenti
+    send_change_notification(changes)
 
     # Salva i dati su Firestore
     try:
