@@ -7,7 +7,7 @@ lxml
 gunicorn
 openpyxl
 google-auth
-
+eventlet
 
  
  
