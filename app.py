@@ -1,7 +1,4 @@
-import eventlet
-eventlet.monkey_patch()
-
-from flask import Flask, render_template, jsonify, send_file, request
+from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 import os
@@ -9,12 +6,11 @@ import json
 import logging
 from google.cloud import firestore
 from google.oauth2 import service_account
-
-
+from flask import send_file 
 
 app = Flask(__name__)
 CORS(app)  # Abilita CORS per tutte le route
-socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=120, ping_interval=25, async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=120, ping_interval=25)
 
 # Configura il logging
 logging.basicConfig(
@@ -59,7 +55,7 @@ def load_data():
     except Exception as e:
         logger.error(f"Errore nel caricamento dei dati da Firestore: {e}")
         return {"green": [], "orange": [], "red": []}
-    
+
 def load_last_update_time():
     """
     Recupera l'ora dell'ultimo aggiornamento.
@@ -104,7 +100,7 @@ def download_excel(filename):
         return send_file(file_path, as_attachment=True)
     else:
         return jsonify({"error": "File non trovato"}), 404
-    
+
 
 @app.route("/last_update", methods=["GET"])
 def last_update():
@@ -125,24 +121,14 @@ def handle_start_fetch():
     stored_data = load_data()
     socketio.emit("update_data", stored_data)
     logger.info("Handle_start_fetch completato")
-    
-@socketio.on("connect")
-def handle_connect():
-    logger.info(f"Client connesso: {request.sid}")
 
-@socketio.on("disconnect")
-def handle_disconnect():
-    logger.info(f"Client disconnesso: {request.sid}")
-
-
+if __name__ == "__main__":
     # Carica i dati all'avvio (opzionale, può essere gestito dinamicamente)
     # load_data()
 
     port = int(os.environ.get("PORT", 5000))
     logger.info(f"Avvio del server Flask su porta {port}")
     try:
-        eventlet.monkey_patch()
         socketio.run(app, host="0.0.0.0", port=port, debug=False)
     except (KeyboardInterrupt, SystemExit):
         logger.info("Server Flask interrotto")
-
