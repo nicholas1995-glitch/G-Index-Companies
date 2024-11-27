@@ -1,4 +1,7 @@
-from flask import Flask, render_template, jsonify
+import eventlet
+eventlet.monkey_patch()
+
+from flask import Flask, render_template, jsonify, send_file, request
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 import os
@@ -6,11 +9,12 @@ import json
 import logging
 from google.cloud import firestore
 from google.oauth2 import service_account
-from flask import send_file 
+
+
 
 app = Flask(__name__)
 CORS(app)  # Abilita CORS per tutte le route
-socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=120, ping_interval=25)
+socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=120, ping_interval=25, async_mode='eventlet')
 
 # Configura il logging
 logging.basicConfig(
@@ -121,14 +125,23 @@ def handle_start_fetch():
     stored_data = load_data()
     socketio.emit("update_data", stored_data)
     logger.info("Handle_start_fetch completato")
+    
+@socketio.on("connect")
+def handle_connect():
+    logger.info(f"Client connesso: {request.sid}")
 
-if __name__ == "__main__":
+@socketio.on("disconnect")
+def handle_disconnect():
+    logger.info(f"Client disconnesso: {request.sid}")
+
+
     # Carica i dati all'avvio (opzionale, può essere gestito dinamicamente)
     # load_data()
 
     port = int(os.environ.get("PORT", 5000))
     logger.info(f"Avvio del server Flask su porta {port}")
     try:
+        eventlet.monkey_patch()
         socketio.run(app, host="0.0.0.0", port=port, debug=False)
     except (KeyboardInterrupt, SystemExit):
         logger.info("Server Flask interrotto")
