@@ -6,7 +6,6 @@ requests
 lxml
 gunicorn
 openpyxl
-requests
 google-auth
 smtplib
 email
