@@ -369,8 +369,8 @@ def send_change_notification(changes):
         logger.error(f"Errore nel caricamento della password email: {e}")
         return
     
-    sender_email = "tua_email@gmail.com"
-    receiver_email = "destinatario_email@gmail.com"
+    sender_email = "nicholas.gazzola@gmail.com"
+    receiver_email = "nicholas.gazzola@gmail.com"
     
     subject = "Aggiornamenti nelle Liste delle Aziende"
     
