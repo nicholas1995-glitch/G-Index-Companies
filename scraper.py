@@ -171,7 +171,7 @@ def generate_excel(data):
     # Crea il file Excel se non esiste
     if not os.path.exists(file_name):
         wb = openpyxl.Workbook()
-        wb.remove(wb.active)
+        # Non rimuovere il foglio attivo
         wb.save(file_name)
 
     # Carica il workbook esistente
@@ -184,9 +184,9 @@ def generate_excel(data):
         if sheet_name in wb.sheetnames:
             sheet = wb[sheet_name]
         else:
-            # Se il workbook ha solo il foglio di default, rinominalo e usalo
-            if len(wb.sheetnames) == 1 and wb.sheetnames[0] == 'Sheet':
-                sheet = wb.active
+            if 'Sheet' in wb.sheetnames and wb['Sheet'].max_row == 1 and wb['Sheet'].max_column == 1 and wb['Sheet'].cell(1,1).value is None:
+                # Rinomina il foglio di default e usalo
+                sheet = wb['Sheet']
                 sheet.title = sheet_name
                 # Scrivi l'intestazione
                 sheet.append(["Data", "P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)", "Price"])
@@ -204,15 +204,22 @@ def generate_excel(data):
             company["Price"]
         ])
 
-    # Dopo aver aggiunto i fogli necessari, puoi rimuovere il foglio di default se è ancora presente e vuoto
+    # Rimuovi il foglio di default se è vuoto e ci sono altri fogli
     if 'Sheet' in wb.sheetnames and len(wb.sheetnames) > 1:
         sheet = wb['Sheet']
         if sheet.max_row == 1 and sheet.max_column == 1 and sheet.cell(1,1).value is None:
             wb.remove(sheet)
 
+    # Assicurati che almeno un foglio sia visibile prima di salvare
+    if not wb.sheetnames:
+        # Creiamo un foglio temporaneo
+        wb.create_sheet("Foglio_Temporaneo")
+        logger.warning("Workbook vuoto. Aggiunto 'Foglio_Temporaneo' per evitare errori.")
+
     wb.save(file_name)
     logger.info("File Excel generato con successo")
     return file_name
+
 
 def send_email(file_name):
     """
