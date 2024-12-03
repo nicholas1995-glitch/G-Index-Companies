@@ -47,16 +47,18 @@ companies_info = {
     "DTE.DE": {"name": "Deutsche Telekom", "isin": "DE0005557508"},
     "MRK.DE": {"name": "Merck", "isin": "DE0006599905"},
     "IFX.DE": {"name": "Infineon", "isin": "DE0006231004"},
- 
 }
 
 # Elenco User-Agent
 USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+    " Chrome/91.0.4472.124 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"
+    " Chrome/90.0.4430.93 Safari/537.36",
     "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
-    # Gli altri User-Agent che avevi...
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15"
+    " (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+    # Aggiungi altri User-Agent se necessario...
 ]
 
 session = requests.Session()
@@ -97,10 +99,10 @@ def scrape_stock_data(ticker):
         logger.info(f"Risposta ricevuta da {url_history} (Status Code: {response_history.status_code})")
 
         # Usa i nuovi XPath
-        pe_ratio = tree_main.xpath('//*[@id="nimbus-app"]/section/section/section/article/div[2]/ul/li[11]/span[2]/fin-streamer/text()')
-        pb_ratio = tree_stats.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[2]/div/table/tbody/tr[7]/td[2]/text()')
-        peg_ratio = tree_stats.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[2]/div/table/tbody/tr[5]/td[2]/text()')
-        price = tree_history.xpath('//*[@id="nimbus-app"]/section/section/section/article/div[1]/div[3]/table/tbody/tr[1]/td[6]/text()')
+        pe_ratio = tree_main.xpath('//*[@data-test="PE_RATIO-value"]/text()')
+        pb_ratio = tree_stats.xpath('//span[text()="Price/Book (mrq)"]/following-sibling::span/text()')
+        peg_ratio = tree_stats.xpath('//span[text()="PEG Ratio (5 yr expected)"]/following-sibling::span/text()')
+        price = tree_history.xpath('//td[@class="Py(10px) Ta(end)"][1]/span/text()')
 
         # Aggiungi log dei valori estratti
         logger.debug(f"P/E Ratio estratto: {pe_ratio}")
@@ -122,7 +124,9 @@ def scrape_stock_data(ticker):
             "Ticker": ticker,
             "Full Name": companies_info[ticker]["name"],
             "ISIN": companies_info[ticker]["isin"],
-            "Calcolo": f"((P/E: {pe_ratio[0] if pe_ratio else '--'} / 15) * 0.4) + (P/B: {pb_ratio[0] if pb_ratio else '--'} * 0.4) + (PEG: {peg_ratio[0] if peg_ratio else '--'} * 0.2)",
+            "Calcolo": f"((P/E: {pe_ratio[0] if pe_ratio else '--'} / 15) * 0.4) + "
+                       f"(P/B: {pb_ratio[0] if pb_ratio else '--'} * 0.4) + "
+                       f"(PEG: {peg_ratio[0] if peg_ratio else '--'} * 0.2)",
         }
     except Exception as e:
         logger.error(f"Errore durante lo scraping di {ticker}: {e}")
@@ -154,82 +158,67 @@ def calculate_g_index(company):
         logger.error(f"Errore nel calcolo dell'Indice G per {company['Ticker']}: {e}")
         return "--"
 
-def generate_excel(data):
+def generate_excel_from_firestore():
     """
-    Genera un file Excel dove ogni foglio è nominato come il ticker e contiene i dati richiesti.
+    Genera un file Excel dove ogni foglio è nominato come il ticker e contiene i dati storici presi da Firestore.
     """
-    logger.info("Inizio generazione file Excel")
+    logger.info("Inizio generazione file Excel dai dati su Firestore")
     file_name = "dati_aziende_ticker.xlsx"
 
-    date = datetime.now().strftime("%Y-%m-%d")
-    
-    # Verifica se la lista 'data' è vuota
-    if not data:
-        logger.error("La lista 'companies' è vuota. Nessun dato da scrivere nel file Excel.")
-        return file_name
+    # Crea un nuovo workbook
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)  # Rimuove il foglio di default
 
-    # Crea il file Excel se non esiste
-    if not os.path.exists(file_name):
-        wb = openpyxl.Workbook()
-        # Non rimuovere il foglio attivo
-        wb.save(file_name)
+    tickers = list(companies_info.keys())
 
-    # Carica il workbook esistente
-    wb = openpyxl.load_workbook(file_name)
-
-    for company in data:
-        ticker = company["Ticker"]
+    for ticker in tickers:
         sheet_name = ticker
+        sheet = wb.create_sheet(sheet_name)
+        # Scrivi l'intestazione
+        sheet.append(["Data", "P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)", "Price"])
 
-        if sheet_name in wb.sheetnames:
-            sheet = wb[sheet_name]
-        else:
-            if 'Sheet' in wb.sheetnames and wb['Sheet'].max_row == 1 and wb['Sheet'].max_column == 1 and wb['Sheet'].cell(1,1).value is None:
-                # Rinomina il foglio di default e usalo
-                sheet = wb['Sheet']
-                sheet.title = sheet_name
-                # Scrivi l'intestazione
-                sheet.append(["Data", "P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)", "Price"])
-            else:
-                sheet = wb.create_sheet(sheet_name)
-                # Scrivi l'intestazione
-                sheet.append(["Data", "P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)", "Price"])
-
-        # Aggiungi i dati nella nuova riga
-        sheet.append([
-            date,
-            company["P/E Ratio"],
-            company["P/Book Ratio"],
-            company["PEG Ratio (5y)"],
-            company["Price"]
-        ])
-
-    # Rimuovi il foglio di default se è vuoto e ci sono altri fogli
-    if 'Sheet' in wb.sheetnames and len(wb.sheetnames) > 1:
-        sheet = wb['Sheet']
-        if sheet.max_row == 1 and sheet.max_column == 1 and sheet.cell(1,1).value is None:
-            wb.remove(sheet)
-
-    # Assicurati che almeno un foglio sia visibile prima di salvare
-    if not wb.sheetnames:
-        # Creiamo un foglio temporaneo
-        wb.create_sheet("Foglio_Temporaneo")
-        logger.warning("Workbook vuoto. Aggiunto 'Foglio_Temporaneo' per evitare errori.")
+        # Recupera i dati storici da Firestore
+        try:
+            docs = db.collection("stock_data").document(ticker).collection("historical_data").stream()
+            data_list = []
+            for doc in docs:
+                data = doc.to_dict()
+                data_date = doc.id  # L'ID del documento è la data e ora
+                data_list.append({
+                    "Data": data_date,
+                    "P/E Ratio": data.get("P/E Ratio", "--"),
+                    "P/Book Ratio": data.get("P/Book Ratio", "--"),
+                    "PEG Ratio (5y)": data.get("PEG Ratio (5y)", "--"),
+                    "Price": data.get("Price", "--")
+                })
+            # Ordina i dati per data
+            data_list.sort(key=lambda x: x["Data"])
+            # Aggiungi i dati al foglio
+            for item in data_list:
+                sheet.append([
+                    item["Data"],
+                    item["P/E Ratio"],
+                    item["P/Book Ratio"],
+                    item["PEG Ratio (5y)"],
+                    item["Price"]
+                ])
+            logger.info(f"Dati per {ticker} aggiunti al file Excel")
+        except Exception as e:
+            logger.error(f"Errore durante il recupero dei dati per {ticker} da Firestore: {e}")
 
     wb.save(file_name)
-    logger.info("File Excel generato con successo")
+    logger.info("File Excel generato con successo dai dati su Firestore")
     return file_name
-
 
 def send_email(file_name):
     """
     Invia il file Excel via email.
     """
     logger.info("Inizio invio email")
-    
+
     # Percorso del file segreto con la password
     EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL_PASSWORD'
-    
+
     # Leggi la password dal file
     try:
         with open(EMAIL_PASSWORD_PATH, 'r') as f:
@@ -237,10 +226,10 @@ def send_email(file_name):
     except Exception as e:
         logger.error(f"Errore nel caricamento della password email: {e}")
         exit(1)  # Termina l'esecuzione in caso di errore
-    
-    sender_email = "nicholas.gazzola@gmail.com"
-    receiver_email = "nicholas.gazzola@gmail.com"
-    
+
+    sender_email = "tua_email@gmail.com"
+    receiver_email = "destinatario_email@gmail.com"
+
     subject = "Dati aggiornati aziende"
     body = "In allegato trovi i dati aggiornati delle aziende."
 
@@ -293,15 +282,15 @@ def update_ticker_categories(new_green, new_orange, new_red):
         doc_ref_green = db.collection("ticker_categories").document("green")
         doc_ref_orange = db.collection("ticker_categories").document("orange")
         doc_ref_red = db.collection("ticker_categories").document("red")
-        
+
         green_dict = {company["Ticker"]: company["Indice G"] for company in new_green}
         orange_dict = {company["Ticker"]: company["Indice G"] for company in new_orange}
         red_dict = {company["Ticker"]: company["Indice G"] for company in new_red}
-        
+
         doc_ref_green.set(green_dict)
         doc_ref_orange.set(orange_dict)
         doc_ref_red.set(red_dict)
-        
+
         logger.info("Liste ticker_categories aggiornate in Firestore.")
     except Exception as e:
         logger.error(f"Errore nell'aggiornare ticker_categories in Firestore: {e}")
@@ -317,25 +306,25 @@ def compare_ticker_categories(previous, current):
         'exited': [],
         'transferred': []
     }
-    
+
     # Creiamo un dizionario che mappa ticker a categorie precedenti
     ticker_to_previous_category = {}
     for category in categories:
         if category in previous:
             for ticker in previous[category]:
                 ticker_to_previous_category[ticker] = category
-    
+
     # Creiamo un dizionario che mappa ticker a categorie correnti
     ticker_to_current_category = {}
     for category in categories:
         if category in current:
             for ticker in current[category]:
                 ticker_to_current_category[ticker] = category
-    
+
     # Ticker attuali e precedenti
     current_tickers = set(ticker_to_current_category.keys())
     previous_tickers = set(ticker_to_previous_category.keys())
-    
+
     # Identificare i ticker entrati (presenti ora ma non prima)
     entered_tickers = current_tickers - previous_tickers
     for ticker in entered_tickers:
@@ -346,7 +335,7 @@ def compare_ticker_categories(previous, current):
             'Categoria': category,
             'Indice G': indice_g
         })
-    
+
     # Identificare i ticker usciti (presenti prima ma non ora)
     exited_tickers = previous_tickers - current_tickers
     for ticker in exited_tickers:
@@ -357,7 +346,7 @@ def compare_ticker_categories(previous, current):
             'Categoria': category,
             'Indice G': indice_g
         })
-    
+
     # Identificare i ticker trasferiti (presente in entrambe ma categoria diversa)
     common_tickers = current_tickers & previous_tickers
     for ticker in common_tickers:
@@ -370,7 +359,7 @@ def compare_ticker_categories(previous, current):
                 'A': current_category,
                 'Indice G': current[current_category][ticker]
             })
-    
+
     return changes
 
 def send_change_notification(changes):
@@ -380,12 +369,12 @@ def send_change_notification(changes):
     if not changes['entered'] and not changes['exited'] and not changes['transferred']:
         logger.info("Nessuna modifica nelle liste delle categorie.")
         return
-    
+
     logger.info("Invio notifica via email per modifiche nelle liste delle categorie.")
-    
+
     # Percorso del file segreto con la password
     EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL_PASSWORD'
-    
+
     # Leggi la password dal file
     try:
         with open(EMAIL_PASSWORD_PATH, 'r') as f:
@@ -393,38 +382,38 @@ def send_change_notification(changes):
     except Exception as e:
         logger.error(f"Errore nel caricamento della password email: {e}")
         return
-    
+
     sender_email = "nicholas.gazzola@gmail.com"
     receiver_email = "nicholas.gazzola@gmail.com"
-    
+
     subject = "Aggiornamenti nelle Liste delle Aziende"
-    
+
     body = "Ci sono stati aggiornamenti nelle liste delle aziende:\n\n"
-    
+
     if changes['entered']:
-        body += "**Aziende Entrate nelle Liste:**\n"
+        body += "Aziende Entrate nelle Liste:\n"
         for company in changes['entered']:
-            body += f"- {company['Ticker']} nella categoria **{company['Categoria'].capitalize()}** con Indice G: {company['Indice G']}\n"
+            body += f"- {company['Ticker']} nella categoria {company['Categoria'].capitalize()} con Indice G: {company['Indice G']}\n"
         body += "\n"
-    
+
     if changes['exited']:
-        body += "**Aziende Uscite dalle Liste:**\n"
+        body += "Aziende Uscite dalle Liste:\n"
         for company in changes['exited']:
-            body += f"- {company['Ticker']} dalla categoria **{company['Categoria'].capitalize()}** con Indice G: {company['Indice G']}\n"
+            body += f"- {company['Ticker']} dalla categoria {company['Categoria'].capitalize()} con Indice G: {company['Indice G']}\n"
         body += "\n"
-    
+
     if changes['transferred']:
-        body += "**Aziende Trasferite tra le Liste:**\n"
+        body += "Aziende Trasferite tra le Liste:\n"
         for company in changes['transferred']:
-            body += f"- {company['Ticker']} da **{company['Da'].capitalize()}** a **{company['A'].capitalize()}** con Indice G: {company['Indice G']}\n"
+            body += f"- {company['Ticker']} da {company['Da'].capitalize()} a {company['A'].capitalize()} con Indice G: {company['Indice G']}\n"
         body += "\n"
-    
+
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
-    
+
     # Invio email
     try:
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
@@ -444,6 +433,9 @@ def update_data():
     tickers = list(companies_info.keys())
     companies = []
 
+    # Ottieni la data e l'ora corrente
+    date_time = datetime.now().strftime("%Y-%m-%d_%H%M%S")  # Include l'ora per esecuzioni multiple nello stesso giorno
+
     for i in range(0, len(tickers), 5):  # Passo di 5
         batch = tickers[i:i + 5]
         logger.info(f"Elaborazione batch {i//5 + 1}: {batch}")
@@ -453,8 +445,18 @@ def update_data():
             company_data["Indice G"] = calculate_g_index(company_data)
             companies.append(company_data)
             logger.info(f"Ticker {ticker} elaborato con Indice G: {company_data['Indice G']}")
+
+            # Salva i dati su Firestore
+            try:
+                # Riferimento al documento per la data corrente nella subcollection historical_data
+                doc_ref = db.collection("stock_data").document(ticker).collection("historical_data").document(date_time)
+                doc_ref.set(company_data)
+                logger.info(f"Dati per {ticker} salvati su Firestore")
+            except Exception as e:
+                logger.error(f"Errore durante il salvataggio dei dati per {ticker} su Firestore: {e}")
+
         if i + 5 < len(tickers):  # Attendi solo se ci sono altri batch
-            logger.info(f"Attesa di 60 secondi prima di elaborare il prossimo batch...")
+            logger.info("Attesa di 60 secondi prima di elaborare il prossimo batch...")
             time.sleep(60)
 
     green = [c for c in companies if c["Indice G"] != "--" and c["Indice G"] < 1]
@@ -494,8 +496,8 @@ def update_data():
     except Exception as e:
         logger.error(f"Errore durante il salvataggio dei dati su Firestore: {e}")
 
-    # Genera l'Excel e invia via email
-    file_name = generate_excel(companies)
+    # Genera l'Excel dai dati su Firestore e invia via email
+    file_name = generate_excel_from_firestore()
     send_email(file_name)
 
     logger.info("Aggiornamento dei dati completato")
