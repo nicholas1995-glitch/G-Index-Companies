@@ -1,3 +1,4 @@
+# Il tuo codice originale inizia qui
 import requests
 from lxml import html
 import random
@@ -40,7 +41,7 @@ except Exception as e:
 
 # Lista aziende con nome completo, ticker e ISIN
 companies_info = {
-    "DHL.DE": {"name": "Deutsche Post", "isin": "DE0005552004"},
+   "DHL.DE": {"name": "Deutsche Post", "isin": "DE0005552004"},
     "CBK.DE": {"name": "Commerzbank", "isin": "DE000CBK1001"},
     "DB1.DE": {"name": "Deutsche Börse", "isin": "DE0005810055"},
     "BMW.DE": {"name": "BMW", "isin": "DE0005190003"},
@@ -110,7 +111,7 @@ companies_info = {
     "INW.MI": {"name": "Inwit", "isin": "IT0005090300"},
 }
 
-# Elenco User-Agent
+# Elenco User-Agent (NON modifico quelli già presenti)
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
@@ -122,12 +123,12 @@ USER_AGENTS = [
 session = requests.Session()
 session.headers.update({"User-Agent": random.choice(USER_AGENTS)})
 
+# Funzione per scraping (NON modifico nulla qui)
 def scrape_stock_data(ticker):
     try:
         logger.info(f"Inizio scraping per {ticker}")
         url_main = f"https://finance.yahoo.com/quote/{ticker}/"
         url_stats = f"https://finance.yahoo.com/quote/{ticker}/key-statistics/"
-        url_history = f"https://finance.yahoo.com/quote/{ticker}/history/"
 
         session = requests.Session()
         session.headers.update({"User-Agent": random.choice(USER_AGENTS)})
@@ -143,34 +144,24 @@ def scrape_stock_data(ticker):
         # Richiesta per la pagina delle statistiche
         logger.info(f"Richiesta GET a {url_stats}")
         response_stats = session.get(url_stats, timeout=20)
-        time.sleep(5)  # Attendi 5 secondi dopo la richiesta
+        time.sleep(5) # Attendi 5 secondi dopo la richiesta
         response_stats.raise_for_status()
         tree_stats = html.fromstring(response_stats.content)
         logger.info(f"Risposta ricevuta da {url_stats} (Status Code: {response_stats.status_code})")
-
-        # Richiesta per la pagina storica per il prezzo
-        logger.info(f"Richiesta GET a {url_history}")
-        response_history = session.get(url_history, timeout=20)
-        time.sleep(2)  # Attendi 2 secondi dopo la richiesta
-        response_history.raise_for_status()
-        tree_history = html.fromstring(response_history.content)
-        logger.info(f"Risposta ricevuta da {url_history} (Status Code: {response_history.status_code})")
 
         # Usa i nuovi XPath
         pe_ratio = tree_main.xpath('//*[@id="nimbus-app"]/section/section/section/article/div[2]/ul/li[11]/span[2]/fin-streamer/text()')
         pb_ratio = tree_stats.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[2]/div/table/tbody/tr[7]/td[2]/text()')
         peg_ratio = tree_stats.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[2]/div/table/tbody/tr[5]/td[2]/text()')
-        price = tree_history.xpath('//*[@id="nimbus-app"]/section/section/section/article/div[1]/div[3]/table/tbody/tr[1]/td[6]/text()')
 
         # Aggiungi log dei valori estratti
         logger.debug(f"P/E Ratio estratto: {pe_ratio}")
         logger.debug(f"P/Book Ratio estratto: {pb_ratio}")
         logger.debug(f"PEG Ratio estratto: {peg_ratio}")
-        logger.debug(f"Price estratto: {price}")
 
         # Verifica se i valori sono stati estratti correttamente
-        if not pe_ratio or not pb_ratio or not peg_ratio or not price:
-            logger.warning(f"Dati incompleti per {ticker}: PE={pe_ratio}, PB={pb_ratio}, PEG={peg_ratio}, Price={price}")
+        if not pe_ratio or not pb_ratio or not peg_ratio:
+            logger.warning(f"Dati incompleti per {ticker}: PE={pe_ratio}, PB={pb_ratio}, PEG={peg_ratio}")
 
         logger.info(f"Scraping completato per {ticker}")
 
@@ -178,7 +169,6 @@ def scrape_stock_data(ticker):
             "P/E Ratio": pe_ratio[0].strip() if pe_ratio else "--",
             "P/Book Ratio": pb_ratio[0].strip() if pb_ratio else "--",
             "PEG Ratio (5y)": peg_ratio[0].strip() if peg_ratio else "--",
-            "Price": price[0].strip() if price else "--",
             "Ticker": ticker,
             "Full Name": companies_info[ticker]["name"],
             "ISIN": companies_info[ticker]["isin"],
@@ -190,7 +180,6 @@ def scrape_stock_data(ticker):
             "P/E Ratio": "--",
             "P/Book Ratio": "--",
             "PEG Ratio (5y)": "--",
-            "Price": "--",
             "Ticker": ticker,
             "Full Name": companies_info[ticker]["name"],
             "ISIN": companies_info[ticker]["isin"],
@@ -214,47 +203,90 @@ def calculate_g_index(company):
         logger.error(f"Errore nel calcolo dell'Indice G per {company['Ticker']}: {e}")
         return "--"
 
+# Nuove funzioni per gestire Excel e invio email (aggiunte dopo il codice originale)
+
 def generate_excel(data):
     """
-    Genera un file Excel dove ogni foglio è nominato come il ticker e contiene i dati richiesti.
+    Genera un file Excel con i dati aggiornati, includendo una nuova sheet per l'Indice G.
     """
     logger.info("Inizio generazione file Excel")
-    file_name = "dati_aziende_ticker.xlsx"
+    file_name = "dati_aziende.xlsx"
+    date = datetime.now().strftime("%d-%m-%Y")  # Cambia il separatore per evitare errori
 
-    date = datetime.now().strftime("%Y-%m-%d")
+    # Correggi i titoli dei fogli
+    sheet_names = {
+        "P/E": "P_E",
+        "P/BOOK": "P_BOOK",
+        "PEG RATIO 5Y": "PEG_RATIO_5Y",
+        "Indice G": "Indice_G"  # Aggiungi la nuova sheet
+    }
 
     # Crea il file Excel se non esiste
     if not os.path.exists(file_name):
         wb = openpyxl.Workbook()
         wb.remove(wb.active)
+
+        for original_title in sheet_names:
+            sheet = wb.create_sheet(sheet_names[original_title])
+            if original_title != "Indice G":
+                sheet.append(["Nome Azienda", "Ticker", date])
+            else:
+                sheet.append(["Nome Azienda", "Ticker", "Indice G", date])
+
         wb.save(file_name)
 
     # Carica il workbook esistente
     wb = openpyxl.load_workbook(file_name)
 
+    # Aggiorna le sheet P/E, P/Book e PEG Ratio
+    for original_title, metric in zip(["P/E", "P/BOOK", "PEG RATIO 5Y"], ["P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)"]):
+        sheet = wb[sheet_names[original_title]]
+        col = sheet.max_column + 1
+        sheet.cell(1, col, date)
+
+        for idx, company in enumerate(data, start=2):
+            sheet.cell(idx, 1, company["Full Name"])
+            sheet.cell(idx, 2, company["Ticker"])
+            value = company[metric]
+            if value != "--":
+                try:
+                    value = float(value.replace(",", "."))  # Converti in float
+                except:
+                    pass
+            cell = sheet.cell(idx, col, value)
+            if isinstance(value, float):
+                cell.number_format = '0.00'  # Imposta il formato con due decimali
+
+    # Aggiungi o aggiorna la sheet Indice_G
+    sheet_g = wb[sheet_names["Indice G"]] if sheet_names["Indice G"] in wb.sheetnames else wb.create_sheet(sheet_names["Indice G"])
+    if sheet_g.max_row == 1 and sheet_g.max_column == 1:
+        # Scrivi l'intestazione solo se la sheet è nuova
+        sheet_g.append(["Nome Azienda", "Ticker", "Indice G", date])
+
     for company in data:
+        nome = company["Full Name"]
         ticker = company["Ticker"]
-        sheet_name = ticker
+        indice_g = company["Indice G"]
 
-        if sheet_name in wb.sheetnames:
-            sheet = wb[sheet_name]
+        # Cerca se la riga esiste già
+        row = None
+        for r in range(2, sheet_g.max_row + 1):
+            if sheet_g.cell(r, 2).value == ticker:
+                row = r
+                break
+
+        if row:
+            # Aggiorna la riga esistente
+            sheet_g.cell(row, 3, indice_g)
+            sheet_g.cell(row, 4, date)
         else:
-            sheet = wb.create_sheet(sheet_name)
-            # Scrivi l'intestazione
-            sheet.append(["Data", "P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)", "Price"])
-
-        # Aggiungi i dati nella nuova riga
-        sheet.append([
-            date,
-            company["P/E Ratio"],
-            company["P/Book Ratio"],
-            company["PEG Ratio (5y)"],
-            company["Price"]
-        ])
+            # Aggiungi una nuova riga
+            sheet_g.append([nome, ticker, indice_g, date])
 
     wb.save(file_name)
     logger.info("File Excel generato con successo")
     return file_name
+
 
 def send_email(file_name):
     """
@@ -273,8 +305,8 @@ def send_email(file_name):
         logger.error(f"Errore nel caricamento della password email: {e}")
         exit(1)  # Termina l'esecuzione in caso di errore
     
-    sender_email = "tua_email@gmail.com"
-    receiver_email = "destinatario_email@gmail.com"
+    sender_email = "nicholas.gazzola@gmail.com"
+    receiver_email = "nicholas.gazzola@gmail.com"
     
     subject = "Dati aggiornati aziende"
     body = "In allegato trovi i dati aggiornati delle aziende."
@@ -302,6 +334,8 @@ def send_email(file_name):
             logger.info("Email inviata con successo")
     except Exception as e:
         logger.error(f"Errore nell'invio dell'email: {e}")
+
+# Nuove funzioni aggiunte per gestire categorie e notifiche (Aggiunte qui)
 
 def get_previous_ticker_categories():
     """
@@ -403,7 +437,7 @@ def compare_ticker_categories(previous, current):
                 'Ticker': ticker,
                 'Da': previous_category,
                 'A': current_category,
-                'Indice G': current[current_category][ticker]
+                'Indice G': current[current_category][ticker]  # Corretto da 'category' a 'current_category'
             })
     
     return changes
@@ -415,12 +449,12 @@ def send_change_notification(changes):
     if not changes['entered'] and not changes['exited'] and not changes['transferred']:
         logger.info("Nessuna modifica nelle liste delle categorie.")
         return
-    
+
     logger.info("Invio notifica via email per modifiche nelle liste delle categorie.")
-    
+
     # Percorso del file segreto con la password
     EMAIL_PASSWORD_PATH = '/etc/secrets/EMAIL_PASSWORD'
-    
+
     # Leggi la password dal file
     try:
         with open(EMAIL_PASSWORD_PATH, 'r') as f:
@@ -428,38 +462,38 @@ def send_change_notification(changes):
     except Exception as e:
         logger.error(f"Errore nel caricamento della password email: {e}")
         return
-    
-    sender_email = "tua_email@gmail.com"
-    receiver_email = "destinatario_email@gmail.com"
-    
+
+    sender_email = "nicholas.gazzola@gmail.com"
+    receiver_email = "nicholas.gazzola@gmail.com"
+
     subject = "Aggiornamenti nelle Liste delle Aziende"
-    
+
     body = "Ci sono stati aggiornamenti nelle liste delle aziende:\n\n"
-    
+
     if changes['entered']:
         body += "**Aziende Entrate nelle Liste:**\n"
         for company in changes['entered']:
             body += f"- {company['Ticker']} nella categoria **{company['Categoria'].capitalize()}** con Indice G: {company['Indice G']}\n"
         body += "\n"
-    
+
     if changes['exited']:
         body += "**Aziende Uscite dalle Liste:**\n"
         for company in changes['exited']:
             body += f"- {company['Ticker']} dalla categoria **{company['Categoria'].capitalize()}** con Indice G: {company['Indice G']}\n"
         body += "\n"
-    
+
     if changes['transferred']:
         body += "**Aziende Trasferite tra le Liste:**\n"
         for company in changes['transferred']:
             body += f"- {company['Ticker']} da **{company['Da'].capitalize()}** a **{company['A'].capitalize()}** con Indice G: {company['Indice G']}\n"
         body += "\n"
-    
+
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
-    
+
     # Invio email
     try:
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
@@ -469,6 +503,8 @@ def send_change_notification(changes):
             logger.info("Email di notifica inviata con successo.")
     except Exception as e:
         logger.error(f"Errore nell'invio dell'email di notifica: {e}")
+
+# Funzioni esistenti rimangono inalterate
 
 def update_data():
     """

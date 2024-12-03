@@ -1,0 +1,13 @@
+google-cloud-firestore
+flask
+flask-cors
+flask-socketio
+requests
+lxml
+gunicorn
+openpyxl
+google-auth
+eventlet
+
+ 
+ 

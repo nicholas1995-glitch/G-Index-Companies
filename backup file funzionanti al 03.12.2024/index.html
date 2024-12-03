@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G Index Companies</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f4f9;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+            color: #007bff;
+        }
+        .table th {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+        .green-header, .orange-header, .red-header {
+            padding: 15px;
+            margin-top: 20px;
+            font-weight: bold;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .green-header {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .orange-header {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .red-header {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            font-weight: bold;
+            color: #007bff;
+            margin: 20px 0;
+        }
+        .password-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .password-section input {
+            margin-right: 10px;
+        }
+        .extra-data {
+            display: none;
+        }
+        .highlight-g {
+            font-weight: bold;
+        }
+        #loading-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            font-family: Arial, sans-serif;
+            color: #333;
+            text-align: center;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+        }
+        #loading-animation {
+            margin: 20px auto 0 auto;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #007bff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-message">
+        <p>L'applicazione si sta caricando, attendi qualche secondo...</p>
+        <div id="loading-animation"></div>
+    </div>
+    <div class="container">
+        <h1>G Index Companies</h1>
+
+        <div class="password-section">
+            <label for="password">Per visualizzare i dati origine, inserire la password:</label>
+            <input type="password" id="password" placeholder="Inserisci password">
+            <button class="btn btn-primary" onclick="revealData()">Conferma Password</button>
+        </div>
+
+        <!-- Sezione Verde -->
+        <div class="green-header">Aziende con Indice G < 1 </div>
+        <table class="table table-hover table-bordered">
+            <thead class="table-success">
+                <tr>
+                    <th>Posizione</th>
+                    <th>Nome Azienda</th>
+                    <th>Ticker</th>
+                    <th>ISIN</th>
+                    <th class="highlight-g">Indice G</th>
+                </tr>
+            </thead>
+            <tbody id="green-table-body">
+                <!-- Dati verde -->
+            </tbody>
+        </table>
+
+        <!-- Sezione Arancione -->
+        <div class="orange-header">Aziende con Indice G fino a 1.5 </div>
+        <table class="table table-hover table-bordered">
+            <thead class="table-warning">
+                <tr>
+                    <th>Posizione</th>
+                    <th>Nome Azienda</th>
+                    <th>Ticker</th>
+                    <th>ISIN</th>
+                    <th class="highlight-g">Indice G</th>
+                </tr>
+            </thead>
+            <tbody id="orange-table-body">
+                <!-- Dati arancione -->
+            </tbody>
+        </table>
+
+        <!-- Sezione Rossa -->
+        <div class="red-header">Aziende con Indice G ≥ 1.5 </div>
+        <table class="table table-hover table-bordered">
+            <thead class="table-danger">
+                <tr>
+                    <th>Posizione</th>
+                    <th>Nome Azienda</th>
+                    <th>Ticker</th>
+                    <th>ISIN</th>
+                    <th class="highlight-g">Indice G</th>
+                </tr>
+            </thead>
+            <tbody id="red-table-body">
+                <!-- Dati rosso -->
+            </tbody>
+        </table>
+
+        <div class="extra-data">
+            <h2 class="text-center">Dati Origine</h2>
+            <table class="table table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th>Nome Azienda</th>
+                        <th>Ticker</th>
+                        <th>P/E Ratio</th>
+                        <th>P/Book Ratio</th>
+                        <th>PEG Ratio (5y)</th>
+                        <th>Calcolo Indice G</th>
+                    </tr>
+                </thead>
+                <tbody id="extra-data-table-body">
+                    <!-- Dati extra -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="loading" id="loading">Caricamento in corso...</div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        async function fetchDataBatch() {
+            try {
+                const response = await fetch("/fetch_data", { method: "POST" });
+                if (!response.ok) {
+                    throw new Error("Errore durante il recupero dei dati");
+                }
+
+                const data = await response.json();
+                const greenTable = document.getElementById("green-table-body");
+                const orangeTable = document.getElementById("orange-table-body");
+                const redTable = document.getElementById("red-table-body");
+                const extraTable = document.getElementById("extra-data-table-body");
+
+                // Svuota le tabelle
+                greenTable.innerHTML = "";
+                orangeTable.innerHTML = "";
+                redTable.innerHTML = "";
+                extraTable.innerHTML = "";
+
+                // Popola la tabella verde
+                data.green.forEach((company, index) => {
+                    const row = createRow(company, index + 1);
+                    greenTable.appendChild(row);
+                });
+
+                // Popola la tabella arancione
+                data.orange.forEach((company, index) => {
+                    const row = createRow(company, index + 1);
+                    orangeTable.appendChild(row);
+                });
+
+                // Popola la tabella rossa
+                data.red.forEach((company, index) => {
+                    const row = createRow(company, index + 1);
+                    redTable.appendChild(row);
+                });
+
+                // Popola i dati extra
+                [...data.green, ...data.orange, ...data.red].forEach(company => {
+                    const extraRow = createExtraRow(company);
+                    extraTable.appendChild(extraRow);
+                });
+
+                // Nascondi il messaggio di caricamento
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("loading-message").style.display = "none";
+            } catch (error) {
+                console.error("Errore durante il caricamento dei dati:", error);
+                document.getElementById("loading").innerText = "Errore durante il caricamento dei dati. Riprova più tardi.";
+            }
+        }
+
+        function createRow(company, position) {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${position}</td>
+                <td>${company["Full Name"]}</td>
+                <td>${company["Ticker"]}</td>
+                <td>${company["ISIN"]}</td>
+                <td class="highlight-g">${company["Indice G"]}</td>
+            `;
+            return row;
+        }
+
+        function createExtraRow(company) {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${company["Full Name"]}</td>
+                <td>${company["Ticker"]}</td>
+                <td>${company["P/E Ratio"]}</td>
+                <td>${company["P/Book Ratio"]}</td>
+                <td>${company["PEG Ratio (5y)"]}</td>
+                <td>${company["Calcolo"]}</td>
+            `;
+            return row;
+        }
+
+        function revealData() {
+            const password = document.getElementById("password").value;
+            if (password === "123456") {
+                document.querySelector(".extra-data").style.display = "block";
+            } else {
+                alert("Password errata");
+            }
+        }
+
+        // Avvia il caricamento dei dati
+        fetchDataBatch();
+    </script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+
+        socket.on("connect", () => {
+            console.log("Connesso al server.");
+            socket.emit("start_fetch");
+        });
+
+        socket.on("update_data", (company) => {
+            const container = document.getElementById("data-container");
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${company["Full Name"]}</td>
+                <td>${company["Ticker"]}</td>
+                <td>${company["P/E Ratio"]}</td>
+                <td>${company["ISIN"]}</td>
+            `;
+            container.appendChild(row);
+        });
+    </script>
+</body>
+</html>
