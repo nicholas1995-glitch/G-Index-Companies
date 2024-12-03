@@ -162,6 +162,11 @@ def generate_excel(data):
     file_name = "dati_aziende_ticker.xlsx"
 
     date = datetime.now().strftime("%Y-%m-%d")
+    
+    # Verifica se la lista 'data' è vuota
+    if not data:
+        logger.error("La lista 'companies' è vuota. Nessun dato da scrivere nel file Excel.")
+        return file_name
 
     # Crea il file Excel se non esiste
     if not os.path.exists(file_name):
@@ -179,9 +184,16 @@ def generate_excel(data):
         if sheet_name in wb.sheetnames:
             sheet = wb[sheet_name]
         else:
-            sheet = wb.create_sheet(sheet_name)
-            # Scrivi l'intestazione
-            sheet.append(["Data", "P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)", "Price"])
+            # Se il workbook ha solo il foglio di default, rinominalo e usalo
+            if len(wb.sheetnames) == 1 and wb.sheetnames[0] == 'Sheet':
+                sheet = wb.active
+                sheet.title = sheet_name
+                # Scrivi l'intestazione
+                sheet.append(["Data", "P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)", "Price"])
+            else:
+                sheet = wb.create_sheet(sheet_name)
+                # Scrivi l'intestazione
+                sheet.append(["Data", "P/E Ratio", "P/Book Ratio", "PEG Ratio (5y)", "Price"])
 
         # Aggiungi i dati nella nuova riga
         sheet.append([
@@ -191,6 +203,12 @@ def generate_excel(data):
             company["PEG Ratio (5y)"],
             company["Price"]
         ])
+
+    # Dopo aver aggiunto i fogli necessari, puoi rimuovere il foglio di default se è ancora presente e vuoto
+    if 'Sheet' in wb.sheetnames and len(wb.sheetnames) > 1:
+        sheet = wb['Sheet']
+        if sheet.max_row == 1 and sheet.max_column == 1 and sheet.cell(1,1).value is None:
+            wb.remove(sheet)
 
     wb.save(file_name)
     logger.info("File Excel generato con successo")
