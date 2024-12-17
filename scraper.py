@@ -160,7 +160,7 @@ def scrape_stock_data(ticker):
         logger.info(f"Risposta ricevuta da {url_history} (Status Code: {response_history.status_code})")
 
         # Usa i nuovi XPath
-        pe_ratio = tree_main.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[2]/div/table/tbody/tr[3]/td[2]/text()')
+        pe_ratio = tree_stats.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[2]/div/table/tbody/tr[3]/td[2]/text()')
         pb_ratio = tree_stats.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[2]/div/table/tbody/tr[7]/td[2]/text()')
         peg_ratio = tree_stats.xpath('//*[@id="nimbus-app"]/section/section/section/article/section[2]/div/table/tbody/tr[5]/td[2]/text()')
         price = tree_history.xpath('//*[@id="nimbus-app"]/section/section/section/article/div[1]/div[3]/table/tbody/tr[1]/td[6]/text()')
